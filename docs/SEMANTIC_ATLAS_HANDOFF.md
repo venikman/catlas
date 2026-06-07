@@ -13,17 +13,19 @@ The current prototype includes:
 - Shared validation and LOD helpers.
 - Postgres migrations with optional PostGIS migration.
 - Deterministic synthetic atlas generation and seeding scripts.
-- Unit and regression tests, including a no-WebGL guard.
+- Centralized visual configuration for density, clusters, labels, points, transitions, and target markers.
+- Production-hardening helpers for runtime limits, cache TTLs, `Server-Timing`, stable response metadata, smoke tests, load tests, and query-plan inspection.
+- Unit and regression tests, including no-WebGL, visual-config, and transition-settling guards.
 
 ## Architecture Overview
 
 - `app/`: Next.js App Router page and API route handlers.
 - `components/atlas/`: Atlas UI surface, SVG renderer, controls, search, inspector, and debug/status components.
 - `components/providers/`: TanStack Query provider.
-- `lib/atlas/`: Shared atlas types, validation, LOD policy, query keys, math helpers, rendering helpers, database access, demo store, and synthetic data generation logic.
+- `lib/atlas/`: Shared atlas types, validation, LOD policy, visual config, runtime config, cache policy, response shaping, query keys, math helpers, rendering helpers, database access, demo store, and synthetic data generation logic.
 - `migrations/`: Baseline Postgres schema and optional PostGIS migration.
-- `scripts/`: Synthetic data generator and Postgres seeder.
-- `tests/atlas/`: Validation, LOD, query-key, synthetic-data, and no-WebGL regression tests.
+- `scripts/`: Synthetic data generator, Postgres seeder, atlas stats, smoke, load-test, and query-analysis runners.
+- `tests/atlas/`: Validation, LOD, query-key, synthetic-data, visual-config, transition, and no-WebGL regression tests.
 - `docs/`: Handoff and continuation notes.
 
 ## How To Run Locally
@@ -81,20 +83,28 @@ Browser/runtime verification should confirm:
 
 ## Current Verification Status
 
-Latest checkpoint verification:
+Latest production-hardening verification:
 
-- `npm test`: passed, 10 tests across 5 files.
+- `npm test`: passed, 19 tests across 8 files.
 - `npm run typecheck`: passed.
 - `npm run build`: passed.
+- `npm run atlas:stats`: passed against `http://localhost:3002`.
+- `npm run atlas:smoke`: passed against `http://localhost:3002`.
+- `npm run atlas:loadtest -- --iterations 12`: passed against `http://localhost:3002`.
 - Browser runtime check at `http://localhost:3002/`: passed.
 
-Runtime browser evidence from the latest no-WebGL check:
+Runtime browser evidence from the latest no-WebGL visual-polish check:
 
 - SVG atlas present.
 - `canvasCount: 0`.
 - No fresh warning/error logs.
 - No framework overlay.
 - No horizontal overflow.
+- Low zoom rendered density-only summaries with no raw point layer.
+- Medium zoom rendered clusters, contours, bounded labels, representative points, and cluster click target markers.
+- High zoom settled below the configured raw point cap after transition completion.
+- Search result selection opened the inspector with selected point halo and target marker.
+- Points endpoint emitted `Server-Timing`, bounded `count/limit/truncated` metadata, and lightweight point payloads without metadata.
 
 ## Known Limitations
 
@@ -116,15 +126,15 @@ Runtime browser evidence from the latest no-WebGL check:
 
 ## Recommended Next Phase
 
-Next phase: visual fidelity polish.
+Current production-hardening pass is complete.
 
-Suggested focus:
+Recommended next phase:
 
-- Compare the live app against the Light Research Atlas mock at the same viewport and interaction state.
-- Tune map camera, island distribution, contour density, point texture, search spacing, and inspector typography.
-- Improve mobile composition beyond overlap prevention.
+- Decide whether the next pass should focus on real-data integration, deeper scale architecture, or CI/e2e automation.
+- For deeper fidelity, replace approximate contour rings with precomputed density isolines or tile-backed density surfaces.
+- Add screenshot/browser regression tests once the design target stabilizes.
+- Improve mobile composition beyond overlap prevention if mobile is a primary review surface.
 - Keep the no-WebGL constraint unless the user explicitly reverses it.
-- Add browser-level regression tests once the design target stabilizes.
 
 ## Risks Before Scaling To 1M Or 10M Points
 

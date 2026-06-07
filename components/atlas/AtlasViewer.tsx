@@ -17,9 +17,11 @@ import {
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { fetchAtlasViews, fetchViewportData } from "@/lib/atlas/api";
+import { ATLAS_CLIENT_CACHE, viewportCachePolicy } from "@/lib/atlas/cachePolicy";
 import { getLodForZoom, zoomBandForZoom } from "@/lib/atlas/lod";
 import { expandBbox } from "@/lib/atlas/math";
 import { atlasQueryKeys } from "@/lib/atlas/queryKeys";
+import { ATLAS_VISUAL_CONFIG, clampAtlasZoom } from "@/lib/atlas/visualConfig";
 import type {
   AtlasBbox,
   AtlasCluster,
@@ -30,6 +32,7 @@ import type {
   AtlasView,
 } from "@/lib/atlas/types";
 import { AtlasControls } from "./AtlasControls";
+import { AtlasDebugPanel } from "./AtlasDebugPanel";
 import { AtlasSearch } from "./AtlasSearch";
 import { AtlasSidePanel } from "./AtlasSidePanel";
 
@@ -68,6 +71,15 @@ const INITIAL_LAYERS: LayerToggles = {
   boundaries: true,
   heat: false,
   links: false,
+};
+
+const DEBUG_PANEL_ENABLED = process.env.NEXT_PUBLIC_ATLAS_DEBUG === "true";
+
+type AtlasTargetMarker = {
+  id: string;
+  label?: string;
+  x: number;
+  y: number;
 };
 
 const FALLBACK_VIEWS: AtlasView[] = [
@@ -119,6 +131,34 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
+function useFrameStats(): { frameMs: number; fps: number } {
+  const [stats, setStats] = useState({ frameMs: 16.7, fps: 60 });
+
+  useEffect(() => {
+    let previous = performance.now();
+    let frame = 0;
+    let raf = 0;
+
+    const tick = (now: number) => {
+      frame += 1;
+      const frameMs = now - previous;
+      previous = now;
+      if (frame % 18 === 0) {
+        setStats({
+          frameMs: Number(frameMs.toFixed(1)),
+          fps: Number((1000 / Math.max(frameMs, 1)).toFixed(1)),
+        });
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return stats;
+}
+
 function extractPoints(data: unknown): AtlasPoint[] {
   if (!data || typeof data !== "object") return [];
   const record = data as {
@@ -143,23 +183,32 @@ function AtlasViewerInner() {
   const [viewport, setViewport] = useState<AtlasViewportState>(INITIAL_VIEWPORT);
   const [layers, setLayers] = useState<LayerToggles>(INITIAL_LAYERS);
   const [hoveredPoint, setHoveredPoint] = useState<AtlasPoint | null>(null);
+  const [hoveredCluster, setHoveredCluster] = useState<AtlasCluster | null>(null);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
+  const [targetMarker, setTargetMarker] = useState<AtlasTargetMarker | null>(null);
+  const [requestCount, setRequestCount] = useState(0);
   const [clusterInspectorDismissed, setClusterInspectorDismissed] = useState(false);
   const [, startTransition] = useTransition();
+  const frameStats = useFrameStats();
 
   const viewsQuery = useQuery({
     queryKey: atlasQueryKeys.views(),
     queryFn: ({ signal }) => fetchAtlasViews(signal),
-    staleTime: 60_000,
+    staleTime: ATLAS_CLIENT_CACHE.views.staleTime,
+    gcTime: ATLAS_CLIENT_CACHE.views.gcTime,
   });
 
   const views = viewsQuery.data?.views ?? FALLBACK_VIEWS;
   const stats = viewsQuery.data?.stats;
   const lod = getLodForZoom(viewport.zoom);
   const bbox = useMemo(() => computeBbox(viewport), [viewport]);
-  const debouncedViewport = useDebouncedValue({ bbox, zoom: viewport.zoom }, 140);
+  const debouncedViewport = useDebouncedValue(
+    { bbox, zoom: viewport.zoom },
+    ATLAS_VISUAL_CONFIG.zoom.debounceMs,
+  );
   const fetchBbox = useMemo(
-    () => expandBbox(debouncedViewport.bbox, 1.18),
+    () => expandBbox(debouncedViewport.bbox, ATLAS_VISUAL_CONFIG.zoom.fetchPadding),
     [debouncedViewport.bbox],
   );
 
@@ -178,22 +227,49 @@ function AtlasViewerInner() {
         signal,
       }),
     placeholderData: keepPreviousData,
-    staleTime: 8_000,
+    ...viewportCachePolicy(lod.layer),
   });
 
   const densityTiles = extractDensityTiles(viewportQuery.data);
   const clusters = extractClusters(viewportQuery.data);
   const points = extractPoints(viewportQuery.data);
+  const clientRequestMs =
+    viewportQuery.data && "clientRequestMs" in viewportQuery.data
+      ? Number(viewportQuery.data.clientRequestMs)
+      : null;
+  const serverTimingMs =
+    viewportQuery.data && "serverTimingMs" in viewportQuery.data
+      ? Number(viewportQuery.data.serverTimingMs)
+      : null;
+  const truncated =
+    viewportQuery.data && "truncated" in viewportQuery.data
+      ? Boolean(viewportQuery.data.truncated)
+      : false;
   const featuredCluster = clusterInspectorDismissed
     ? null
-    : clusters.find((cluster) => cluster.clusterId === "graph-neural-networks") ??
+    : clusters.find((cluster) => cluster.clusterId === selectedClusterId) ??
+      clusters.find((cluster) => cluster.clusterId === "graph-neural-networks") ??
       clusters[0] ??
       null;
+
+  useEffect(() => {
+    if (viewportQuery.data) {
+      setRequestCount((current) => current + 1);
+    }
+  }, [viewportQuery.data]);
+
+  function showTargetMarker(marker: AtlasTargetMarker) {
+    setTargetMarker(marker);
+    window.setTimeout(() => {
+      setTargetMarker((current) => (current?.id === marker.id ? null : current));
+    }, ATLAS_VISUAL_CONFIG.animation.targetMarkerMs);
+  }
 
   function handleSelectView(nextView: string) {
     startTransition(() => {
       setSelectedView(nextView);
       setClusterInspectorDismissed(false);
+      setSelectedClusterId(null);
       setLayers((current) => ({
         ...current,
         density: true,
@@ -204,24 +280,59 @@ function AtlasViewerInner() {
   }
 
   function handleSearchResult(result: AtlasSearchResult) {
+    const marker = {
+      id: `search-${result.entityId}-${Date.now()}`,
+      label: result.label,
+      x: result.x,
+      y: result.y,
+    };
+    showTargetMarker(marker);
     setViewport({
       centerX: result.x,
       centerY: result.y,
-      zoom: Math.max(viewport.zoom, 7.05),
+      zoom: Math.max(viewport.zoom, ATLAS_VISUAL_CONFIG.zoom.flyToZoom),
     });
     setSelectedEntityId(result.entityId);
+    setSelectedClusterId(result.clusterId);
     setClusterInspectorDismissed(false);
+  }
+
+  function handleSelectCluster(cluster: AtlasCluster) {
+    const marker = {
+      id: `cluster-${cluster.clusterId}-${Date.now()}`,
+      label: cluster.label,
+      x: cluster.centroidX,
+      y: cluster.centroidY,
+    };
+    showTargetMarker(marker);
+    setSelectedEntityId(null);
+    setSelectedClusterId(cluster.clusterId);
+    setClusterInspectorDismissed(false);
+    setViewport((current) => ({
+      ...current,
+      centerX: cluster.centroidX,
+      centerY: cluster.centroidY,
+      zoom: clampAtlasZoom(
+        Math.max(
+          current.zoom + 1.1,
+          ATLAS_VISUAL_CONFIG.zoom.clusterClickZoom,
+        ),
+      ),
+    }));
   }
 
   function handleZoomStep(delta: number) {
     setViewport((current) => ({
       ...current,
-      zoom: Math.min(9.5, Math.max(-1.5, Number((current.zoom + delta).toFixed(2)))),
+      zoom: clampAtlasZoom(current.zoom + delta),
     }));
   }
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-[#f8f6f0]">
+    <main
+      className="relative h-screen w-screen overflow-hidden bg-[#f8f6f0]"
+      data-testid="atlas-root"
+    >
       <aside className="absolute inset-y-0 left-0 z-20 flex w-[72px] flex-col border-r border-slate-200/80 bg-white/72 px-3 py-5 backdrop-blur-xl sm:w-[176px] sm:px-5 sm:py-6">
         <div className="flex items-center gap-3">
           <div className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 bg-white">
@@ -328,13 +439,20 @@ function AtlasViewerInner() {
           bbox={bbox}
           clusters={clusters}
           densityTiles={densityTiles}
+          hoveredEntityId={hoveredPoint?.entityId ?? null}
           layers={layers}
           lod={lod.layer}
+          onHoverCluster={setHoveredCluster}
           onHoverPoint={setHoveredPoint}
-          onSelectPoint={(point) => setSelectedEntityId(point.entityId)}
+          onSelectCluster={handleSelectCluster}
+          onSelectPoint={(point) => {
+            setSelectedEntityId(point.entityId);
+            setSelectedClusterId(point.clusterId);
+          }}
           points={points}
           selectedEntityId={selectedEntityId}
           setViewport={setViewport}
+          targetMarker={targetMarker}
           viewport={viewport}
         />
 
@@ -350,11 +468,43 @@ function AtlasViewerInner() {
             <AtlasControls onZoomStep={handleZoomStep} />
           </div>
 
+          {DEBUG_PANEL_ENABLED ? (
+            <div className="pointer-events-auto absolute left-5 top-[430px] hidden sm:block">
+              <AtlasDebugPanel
+                activeView={selectedView}
+                animationActive={Boolean(targetMarker)}
+                bbox={bbox}
+                clusterCount={clusters.length}
+                densityTileCount={densityTiles.length}
+                fetchedPointCount={points.length}
+                frameMs={frameStats.frameMs}
+                fps={frameStats.fps}
+                isFetching={viewportQuery.isFetching}
+                lastRequestMs={clientRequestMs}
+                lod={lod.layer}
+                pointCount={points.length}
+                requestCount={requestCount}
+                serverTimingMs={serverTimingMs}
+                source={stats?.source ?? "unknown"}
+                truncated={truncated}
+                zoom={viewport.zoom}
+              />
+            </div>
+          ) : null}
+
           {hoveredPoint ? (
             <div className="atlas-panel pointer-events-none absolute left-[52%] top-[47%] w-[228px] rounded-md px-3 py-2 text-[12px]">
               <div className="font-semibold text-slate-950">{hoveredPoint.label}</div>
               <div className="mt-1 text-slate-500">
                 {hoveredPoint.entityType} · {hoveredPoint.clusterId}
+              </div>
+            </div>
+          ) : hoveredCluster ? (
+            <div className="atlas-panel pointer-events-none absolute left-[52%] top-[47%] w-[228px] rounded-md px-3 py-2 text-[12px]">
+              <div className="font-semibold text-slate-950">{hoveredCluster.label}</div>
+              <div className="mt-1 text-slate-500">
+                {hoveredCluster.pointCount.toLocaleString()} points ·{" "}
+                {hoveredCluster.clusterId}
               </div>
             </div>
           ) : null}
@@ -463,6 +613,8 @@ function LodStrip({
                   ? "bg-white text-slate-950 shadow-sm"
                   : "bg-slate-100/70 text-slate-500"
               }`}
+              data-atlas-kind="lod-button"
+              data-atlas-lod={layer}
               onClick={() =>
                 onZoomChange(layer === "density" ? 1.2 : layer === "clusters" ? 4.2 : 7.2)
               }

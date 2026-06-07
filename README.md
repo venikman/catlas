@@ -129,6 +129,45 @@ Important acceptance checks:
 - Pan/zoom requests are debounced and keyed by view, LOD, zoom band, and bbox.
 - Hover/click/search/side panel work in the no-WebGL SVG atlas.
 
+## Operational Hardening
+
+Copy the example environment file and set values for the target environment:
+
+```bash
+cp .env.example .env
+```
+
+Useful runtime controls:
+
+- `ATLAS_MAX_POINTS_PER_RESPONSE`
+- `ATLAS_MAX_CLUSTERS_PER_RESPONSE`
+- `ATLAS_MAX_REPRESENTATIVE_POINTS_PER_RESPONSE`
+- `ATLAS_MAX_DENSITY_TILES_PER_RESPONSE`
+- `ATLAS_MAX_SEARCH_RESULTS`
+- `ATLAS_ENABLE_SERVER_TIMING`
+- `ATLAS_DEBUG`
+- `NEXT_PUBLIC_ATLAS_DEBUG`
+- `ATLAS_CACHE_TTL_LOW_ZOOM`
+- `ATLAS_CACHE_TTL_MEDIUM_ZOOM`
+- `ATLAS_CACHE_TTL_HIGH_ZOOM`
+
+Smoke and performance scripts expect a running server:
+
+```bash
+ATLAS_BASE_URL=http://localhost:3002 npm run atlas:stats
+ATLAS_BASE_URL=http://localhost:3002 npm run atlas:smoke
+ATLAS_BASE_URL=http://localhost:3002 npm run atlas:loadtest -- --iterations 90
+DATABASE_URL=postgres://user:pass@host:5432/catlas npm run atlas:analyze-queries
+```
+
+Production notes:
+
+```text
+docs/atlas-production.md
+```
+
+The hardening notes cover API bounds, Server-Timing headers, cache policy, required indexes, query-plan inspection, monitoring, smoke tests, and the path from 170k to 1M/10M points.
+
 ## Scale Notes
 
 Prototype-ready:

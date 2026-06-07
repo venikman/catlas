@@ -50,6 +50,21 @@ describe("atlas request validation", () => {
     expect(huge.ok).toBe(false);
   });
 
+  it("rejects excessive high-zoom point bboxes", () => {
+    const result = parseAtlasBboxParams(
+      new URLSearchParams({
+        view: "research-domains",
+        zoom: "7.2",
+        minX: "-10",
+        maxX: "10",
+        minY: "-1",
+        maxY: "1",
+      }),
+    );
+
+    expect(result.ok).toBe(false);
+  });
+
   it("keeps search lightweight and trims query text", () => {
     const result = parseAtlasSearchParams(
       new URLSearchParams({
@@ -62,7 +77,7 @@ describe("atlas request validation", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.q).toBe("graph neural networks");
-      expect(result.value.limit).toBe(25);
+      expect(result.value.limit).toBe(20);
     }
   });
 });

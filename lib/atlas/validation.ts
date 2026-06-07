@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { ATLAS_LOD_CONFIG } from "./lod";
+import { ATLAS_RUNTIME_CONFIG } from "./runtimeConfig";
 import type { ParsedAtlasViewport, ValidationResult } from "./types";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const MAX_BBOX_SPAN = 80;
 
 const numberParam = z.coerce.number().finite();
 
@@ -48,12 +48,23 @@ export function parseAtlasBboxParams(
 
   const width = maxX - minX;
   const height = maxY - minY;
-  if (width > MAX_BBOX_SPAN || height > MAX_BBOX_SPAN) {
+  if (
+    width > ATLAS_RUNTIME_CONFIG.limits.maxBboxSpan ||
+    height > ATLAS_RUNTIME_CONFIG.limits.maxBboxSpan
+  ) {
     return { ok: false, status: 400, error: "Bbox is too large." };
   }
 
-  const requestedLimit = parsed.data.limit ?? ATLAS_LOD_CONFIG.maxPoints;
-  const limit = Math.min(requestedLimit, ATLAS_LOD_CONFIG.maxPoints);
+  if (
+    zoom >= ATLAS_LOD_CONFIG.pointsMinZoom &&
+    (width > ATLAS_RUNTIME_CONFIG.limits.maxHighZoomBboxSpan ||
+      height > ATLAS_RUNTIME_CONFIG.limits.maxHighZoomBboxSpan)
+  ) {
+    return { ok: false, status: 400, error: "High zoom bbox is too large." };
+  }
+
+  const requestedLimit = parsed.data.limit ?? ATLAS_RUNTIME_CONFIG.limits.maxPoints;
+  const limit = Math.min(requestedLimit, ATLAS_RUNTIME_CONFIG.limits.maxPoints);
 
   return {
     ok: true,
@@ -81,12 +92,12 @@ export function parseAtlasSearchParams(
 
   const requestedLimit = Number.parseInt(value(params, "limit") ?? "", 10);
   const limit = Number.isFinite(requestedLimit)
-    ? Math.min(Math.max(requestedLimit, 1), ATLAS_LOD_CONFIG.maxSearchResults)
-    : ATLAS_LOD_CONFIG.maxSearchResults;
+    ? Math.min(Math.max(requestedLimit, 1), ATLAS_RUNTIME_CONFIG.limits.maxSearchResults)
+    : ATLAS_RUNTIME_CONFIG.limits.maxSearchResults;
 
   return { ok: true, value: { view, q, limit } };
 }
 
 export function jsonError(error: string, status = 400): Response {
-  return Response.json({ error }, { status });
+  return Response.json({ error, ok: false, status }, { status });
 }

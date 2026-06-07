@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Copy, ExternalLink, Maximize2, MoreHorizontal, Pin, Share2, X } from "lucide-react";
 import { fetchAtlasEntity } from "@/lib/atlas/api";
+import { ATLAS_CLIENT_CACHE } from "@/lib/atlas/cachePolicy";
 import { atlasQueryKeys } from "@/lib/atlas/queryKeys";
 import type { AtlasCluster } from "@/lib/atlas/types";
 
@@ -21,7 +22,8 @@ export function AtlasSidePanel({
     enabled: Boolean(entityId),
     queryKey: atlasQueryKeys.entity(entityId ?? ""),
     queryFn: ({ signal }) => fetchAtlasEntity(entityId ?? "", signal),
-    staleTime: 45_000,
+    staleTime: ATLAS_CLIENT_CACHE.entity.staleTime,
+    gcTime: ATLAS_CLIENT_CACHE.entity.gcTime,
   });
 
   const entity = entityQuery.data?.entity;
@@ -34,6 +36,7 @@ export function AtlasSidePanel({
           ? "bottom-2 left-[82px] right-2 h-[48vh] sm:left-auto sm:right-5 sm:top-5 sm:h-[calc(100vh-172px)] sm:w-[300px]"
           : "right-5 top-5 hidden h-[calc(100vh-172px)] w-[300px] sm:flex"
       }`}
+      data-testid="atlas-side-panel"
     >
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
         <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">

@@ -7,8 +7,20 @@ import type {
   AtlasSearchResult,
   AtlasView,
 } from "./types";
+import { getLodForZoom } from "./lod";
+
+export type AtlasResponseMetrics = {
+  count?: number;
+  limit?: number;
+  serverTimingMs?: number;
+  timings?: Record<string, number>;
+  truncated?: boolean;
+};
 
 export type AtlasViewsResponse = {
+  count?: number;
+  limit?: number;
+  serverTimingMs?: number;
   views: AtlasView[];
   stats: {
     source: string;
@@ -21,15 +33,28 @@ export type AtlasViewportResponse =
   | {
       lod: "density";
       view: string;
+      zoom: number;
       bbox: AtlasBbox;
       count: number;
+      limit: number;
+      serverTimingMs?: number;
+      timings?: Record<string, number>;
+      truncated: boolean;
       tiles: AtlasDensityTile[];
     }
   | {
       lod: "clusters";
       view: string;
+      zoom: number;
       bbox: AtlasBbox;
       count: number;
+      limit: number;
+      representativeLimit: number;
+      representativePointCount: number;
+      representativeTruncated: boolean;
+      serverTimingMs?: number;
+      timings?: Record<string, number>;
+      truncated: boolean;
       clusters: AtlasCluster[];
       representativePoints: AtlasPoint[];
     }
@@ -39,6 +64,9 @@ export type AtlasViewportResponse =
       bbox: AtlasBbox;
       count: number;
       limit: number;
+      serverTimingMs?: number;
+      timings?: Record<string, number>;
+      truncated: boolean;
       points: AtlasPoint[];
     };
 
@@ -50,12 +78,25 @@ function withBbox(url: URL, bbox: AtlasBbox) {
 }
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const startedAt = performance.now();
   const response = await fetch(url, { signal });
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Request failed with ${response.status}`);
+    const body = (await response.json().catch(() => null)) as {
+      error?: string | { message?: string };
+    } | null;
+    const message =
+      typeof body?.error === "string"
+        ? body.error
+        : body?.error?.message ?? `Request failed with ${response.status}`;
+    throw new Error(message);
   }
-  return response.json() as Promise<T>;
+  const body = (await response.json()) as T;
+  if (body && typeof body === "object") {
+    (body as T & { clientRequestMs?: number }).clientRequestMs = Number(
+      (performance.now() - startedAt).toFixed(2),
+    );
+  }
+  return body;
 }
 
 export async function fetchAtlasViews(signal?: AbortSignal) {
@@ -68,12 +109,7 @@ export async function fetchViewportData(input: {
   bbox: AtlasBbox;
   signal?: AbortSignal;
 }): Promise<AtlasViewportResponse> {
-  const endpoint =
-    input.zoom < 3
-      ? "/api/atlas/density"
-      : input.zoom < 6.01
-        ? "/api/atlas/clusters"
-        : "/api/atlas/points";
+  const endpoint = getLodForZoom(input.zoom).endpoint;
   const url = new URL(endpoint, window.location.origin);
   url.searchParams.set("view", input.view);
   url.searchParams.set("zoom", String(input.zoom));
@@ -95,7 +131,7 @@ export async function searchAtlas(input: {
   view: string;
   q: string;
   signal?: AbortSignal;
-}): Promise<{ results: AtlasSearchResult[] }> {
+}): Promise<{ results: AtlasSearchResult[] } & AtlasResponseMetrics> {
   const url = new URL("/api/atlas/search", window.location.origin);
   url.searchParams.set("view", input.view);
   url.searchParams.set("q", input.q);

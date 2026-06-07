@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Settings2, X } from "lucide-react";
 import { Fragment, useDeferredValue, useState } from "react";
 import { searchAtlas } from "@/lib/atlas/api";
+import { ATLAS_CLIENT_CACHE } from "@/lib/atlas/cachePolicy";
 import { atlasQueryKeys } from "@/lib/atlas/queryKeys";
 import type { AtlasSearchResult } from "@/lib/atlas/types";
 
@@ -64,7 +65,8 @@ export function AtlasSearch({
     enabled: deferredQ.length >= 2,
     queryKey: atlasQueryKeys.search({ view: selectedView, q: deferredQ }),
     queryFn: ({ signal }) => searchAtlas({ view: selectedView, q: deferredQ, signal }),
-    staleTime: 20_000,
+    staleTime: ATLAS_CLIENT_CACHE.search.staleTime,
+    gcTime: ATLAS_CLIENT_CACHE.search.gcTime,
   });
 
   const results = query.data?.results ?? [];
@@ -76,6 +78,7 @@ export function AtlasSearch({
           <Search size={17} className="text-slate-500" />
           <input
             className="min-w-0 flex-1 bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-slate-400"
+            data-testid="atlas-search-input"
             value={q}
             onChange={(event) => setQ(event.target.value)}
             placeholder="Search labels or entities"
@@ -131,6 +134,9 @@ export function AtlasSearch({
                       ? "border-blue-400 bg-blue-50/50"
                       : "border-transparent hover:border-slate-200 hover:bg-white"
                   }`}
+                  data-atlas-entity-id={result.entityId}
+                  data-atlas-kind="search-result"
+                  data-atlas-result-index={index}
                   onClick={() => onResultSelect(result)}
                 >
                   <div className="flex items-start gap-3">

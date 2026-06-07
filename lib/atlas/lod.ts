@@ -6,9 +6,9 @@ export const ATLAS_LOD_CONFIG = {
   pointsMinZoom: 6.01,
   maxDensityTiles: 240,
   maxClusters: 600,
-  maxRepresentativePoints: 1200,
+  maxRepresentativePoints: 760,
   maxPoints: 5000,
-  maxSearchResults: 25,
+  maxSearchResults: 20,
   viewTransitionMs: 720,
 } as const;
 

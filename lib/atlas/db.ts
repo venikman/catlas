@@ -174,8 +174,8 @@ export async function listAtlasPoints(input: {
         p.label,
         p.entity_type,
         p.importance,
-        p.payload_summary,
-        p.metadata,
+        '' as payload_summary,
+        null::jsonb as metadata,
         c.color_key
       from atlas_points p
       join atlas_views v on v.id = p.view_id

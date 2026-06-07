@@ -76,3 +76,25 @@ input {
   background: rgba(100, 116, 139, 0.28);
   border-radius: 999px;
 }
+
+@keyframes atlas-target-pulse {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.2);
+  }
+
+  70% {
+    opacity: 0.28;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+.atlas-target-marker-ring {
+  animation: atlas-target-pulse 1100ms ease-out forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}

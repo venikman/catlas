@@ -1,5 +1,6 @@
 import { getAtlasEntity, getAtlasSourceMode } from "@/lib/atlas/db";
-import { jsonError } from "@/lib/atlas/validation";
+import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
+import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
 
 export const dynamic = "force-dynamic";
 
@@ -7,19 +8,54 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const timer = createAtlasRouteTimer("entity");
   if (getAtlasSourceMode() === "unavailable") {
-    return jsonError("DATABASE_URL is not configured.", 503);
+    return atlasError("DATABASE_URL is not configured.", {
+      code: "ATLAS_DATABASE_UNAVAILABLE",
+      status: 503,
+      timer,
+      ttlSeconds: 0,
+    });
   }
 
+  const validationStartedAt = performance.now();
   const { id } = await context.params;
+  timer.mark("validation", validationStartedAt);
   if (!id || id.length > 160) {
-    return jsonError("Invalid entity id.", 400);
+    return atlasError("Invalid entity id.", {
+      code: "ATLAS_INVALID_ENTITY_ID",
+      status: 400,
+      timer,
+      ttlSeconds: 0,
+    });
   }
 
-  const entity = await getAtlasEntity(id);
+  const entity = await timer.measure("query", () => getAtlasEntity(id));
   if (!entity) {
-    return jsonError("Entity not found.", 404);
+    return atlasError("Entity not found.", {
+      code: "ATLAS_ENTITY_NOT_FOUND",
+      status: 404,
+      timer,
+      ttlSeconds: ATLAS_RUNTIME_CONFIG.cacheTtlSeconds.entity,
+    });
   }
 
-  return Response.json({ entity });
+  const serializationStartedAt = performance.now();
+  timer.mark("serialize", serializationStartedAt);
+  logAtlasRequest({
+    count: 1,
+    route: "entity",
+    timer,
+  });
+
+  return atlasJson({
+    count: 1,
+    limit: 1,
+    truncated: false,
+    ...timer.meta(),
+    entity,
+  }, {
+    timer,
+    ttlSeconds: ATLAS_RUNTIME_CONFIG.cacheTtlSeconds.entity,
+  });
 }

@@ -1,0 +1,439 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { ATLAS_BUDGETS, BUDGETS } from "../budgets";
+import { scenarioUrl } from "../scenarios";
+import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";
+import {
+  fail,
+  hasPackage,
+  isServerReachable,
+  pass,
+  skip,
+  tryFetchJson,
+  warn,
+} from "./helpers";
+
+function source(path: string): string {
+  return readFileSync(join(process.cwd(), path), "utf8");
+}
+
+async function browserRuntimeChecks(
+  baseUrl: string,
+): Promise<CheckResult[]> {
+  if (!(await isServerReachable(baseUrl))) {
+    return [
+      skip(
+        "render-browser-runtime",
+        "render",
+        "Browser runtime console capture",
+        `Server not reachable at ${baseUrl}; browser console and network checks were not measured.`,
+      ),
+    ];
+  }
+
+  if (!hasPackage("playwright")) {
+    return [
+      skip(
+        "render-browser-runtime",
+        "render",
+        "Browser runtime console capture",
+        "Playwright is not installed; browser console and network checks were not measured.",
+      ),
+    ];
+  }
+
+  const { chromium } = await import("playwright");
+  const candidates: NonNullable<Parameters<typeof chromium.launch>[0]>[] = [
+    { channel: process.env.BENCH_BROWSER_CHANNEL ?? "chrome", headless: true },
+    { headless: true },
+  ];
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
+  let launchError = "";
+
+  for (const options of candidates) {
+    try {
+      browser = await chromium.launch(options);
+      break;
+    } catch (error) {
+      launchError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  if (!browser) {
+    return [
+      skip(
+        "render-browser-runtime",
+        "render",
+        "Browser runtime console capture",
+        `Playwright is installed, but no browser launched. Last error: ${launchError}`,
+      ),
+    ];
+  }
+
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const failedRequests: string[] = [];
+  const failedResponses: string[] = [];
+  const atlasRequests: string[] = [];
+  const atlasResponseSizePromises: Array<
+    Promise<{ bytes: number; path: string; status: number }>
+  > = [];
+  const startedAt = performance.now();
+
+  try {
+    const page = await browser.newPage({ viewport: { height: 900, width: 1440 } });
+    await page.route("**/favicon.ico", (route) =>
+      route.fulfill({ body: "", status: 204 }),
+    );
+    page.on("console", (message) => {
+      const text = message.text();
+      if (message.type() === "error") errors.push(text);
+      if (message.type() === "warning") warnings.push(text);
+    });
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/atlas/")) atlasRequests.push(new URL(url).pathname);
+    });
+    page.on("requestfailed", (request) => {
+      failedRequests.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`);
+    });
+    page.on("response", (response) => {
+      const url = response.url();
+      if (url.includes("/api/atlas/")) {
+        const path = new URL(url).pathname;
+        if (response.status() >= 400) {
+          failedResponses.push(`${response.status()} ${url}`);
+        }
+        atlasResponseSizePromises.push(
+          response
+            .body()
+            .then((body) => ({
+              bytes: body.byteLength,
+              path,
+              status: response.status(),
+            }))
+            .catch(() => ({ bytes: 0, path, status: response.status() })),
+        );
+      }
+    });
+
+    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+    await page.locator('[data-testid="atlas-root"]').waitFor({ timeout: 5000 });
+    const mapSvg = page.locator(
+      '[data-testid="atlas-canvas"] svg[aria-label="Semantic atlas map"]',
+    );
+    await mapSvg.waitFor({ timeout: 5000 });
+    await page.waitForTimeout(350);
+
+    const rootReadyMs = Number((performance.now() - startedAt).toFixed(2));
+    const svgBox = await mapSvg.boundingBox();
+    const pointRequests = atlasRequests.filter((path) => path === "/api/atlas/points");
+    const atlasResponseSizes = await Promise.all(atlasResponseSizePromises);
+    const initialAtlasPayloadBytes = atlasResponseSizes.reduce(
+      (total, response) => total + response.bytes,
+      0,
+    );
+
+    return [
+      pass(
+        "render-browser-runtime",
+        "render",
+        "Browser runtime console capture",
+        `Captured browser runtime for ${rootReadyMs} ms with ${atlasRequests.length} atlas API requests.`,
+        {
+          budget: BUDGETS.webVitals.coldStartMs,
+          comparison: "lte",
+          measured: rootReadyMs,
+          severity: "warn",
+          sotaBudget: ATLAS_BUDGETS.coldStart.firstMeaningfulAtlasRenderMs.sota,
+          unit: "ms",
+        },
+      ),
+      errors.length === 0
+        ? pass(
+            "render-browser-console-errors",
+            "render",
+            "No browser console errors",
+            "Captured 0 browser console errors and page errors.",
+          )
+        : fail(
+            "render-browser-console-errors",
+            "render",
+            "No browser console errors",
+            `Captured ${errors.length} browser errors: ${errors.slice(0, 3).join(" | ")}`,
+          ),
+      warnings.length === 0
+        ? pass(
+            "render-browser-console-warnings",
+            "render",
+            "Browser console warnings captured",
+            "Captured 0 browser console warnings.",
+            { severity: "warn" },
+          )
+        : warn(
+            "render-browser-console-warnings",
+            "render",
+            "Browser console warnings captured",
+            `Captured ${warnings.length} browser warnings: ${warnings.slice(0, 3).join(" | ")}`,
+          ),
+      failedRequests.length === 0 && failedResponses.length === 0
+        ? pass(
+            "render-browser-network",
+            "render",
+            "No failed browser network requests",
+            "Captured 0 failed browser network requests and 0 failed atlas API responses.",
+          )
+        : fail(
+            "render-browser-network",
+            "render",
+            "No failed browser network requests",
+            `Captured ${failedRequests.length} failed requests and ${failedResponses.length} failed atlas API responses: ${[
+              ...failedRequests,
+              ...failedResponses,
+            ]
+              .slice(0, 3)
+              .join(" | ")}`,
+          ),
+      pointRequests.length === 0
+        ? pass(
+            "render-initial-no-points-fetch",
+            "render",
+            "Initial load avoids raw points endpoint",
+            "Initial browser load did not call /api/atlas/points.",
+          )
+        : fail(
+            "render-initial-no-points-fetch",
+            "render",
+            "Initial load avoids raw points endpoint",
+            `Initial browser load called /api/atlas/points ${pointRequests.length} times.`,
+          ),
+      initialAtlasPayloadBytes <= BUDGETS.hardCaps.initialAtlasPayloadBytes
+        ? initialAtlasPayloadBytes <= BUDGETS.payloadBytes.initialSoftTarget
+          ? pass(
+              "render-initial-atlas-payload",
+              "render",
+              "Initial atlas API payload is bounded",
+              `Initial atlas API payload was ${initialAtlasPayloadBytes} bytes across ${atlasResponseSizes.length} responses.`,
+              {
+                budget: BUDGETS.payloadBytes.initialSoftTarget,
+                comparison: "lte",
+                measured: initialAtlasPayloadBytes,
+                severity: "warn",
+                sotaBudget: ATLAS_BUDGETS.payloadBytes.initialAtlas.sota,
+                unit: "bytes",
+              },
+            )
+          : warn(
+              "render-initial-atlas-payload",
+              "render",
+              "Initial atlas API payload is bounded",
+              `Initial atlas API payload was ${initialAtlasPayloadBytes} bytes, above good target ${BUDGETS.payloadBytes.initialSoftTarget}.`,
+              {
+                budget: BUDGETS.payloadBytes.initialSoftTarget,
+                comparison: "lte",
+                measured: initialAtlasPayloadBytes,
+                sotaBudget: ATLAS_BUDGETS.payloadBytes.initialAtlas.sota,
+                unit: "bytes",
+              },
+            )
+        : fail(
+            "render-initial-atlas-payload",
+            "render",
+            "Initial atlas API payload is bounded",
+            `Initial atlas API payload was ${initialAtlasPayloadBytes} bytes, above hard cap ${BUDGETS.hardCaps.initialAtlasPayloadBytes}.`,
+            {
+              budget: BUDGETS.hardCaps.initialAtlasPayloadBytes,
+              comparison: "lte",
+              measured: initialAtlasPayloadBytes,
+              sotaBudget: ATLAS_BUDGETS.payloadBytes.initialAtlas.sota,
+              unit: "bytes",
+            },
+          ),
+      svgBox && svgBox.width > 0 && svgBox.height > 0
+        ? pass(
+            "render-browser-nonblank-shell",
+            "render",
+            "Atlas renderer has visible bounds",
+            `SVG bounds were ${Math.round(svgBox.width)}x${Math.round(svgBox.height)} px.`,
+          )
+        : fail(
+            "render-browser-nonblank-shell",
+            "render",
+            "Atlas renderer has visible bounds",
+            "SVG renderer bounding box was missing or zero-sized.",
+          ),
+    ];
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function renderValidator(
+  context: BenchmarkContext,
+): Promise<ValidatorResult> {
+  const results: CheckResult[] = [];
+  const canvasSource = source("components/atlas/AtlasCanvas.tsx");
+  const viewerSource = source("components/atlas/AtlasViewer.tsx");
+  const noWebglTestSource = source("tests/atlas/noWebglRenderer.test.ts");
+
+  const hasSvgRenderer = /<svg[\s>]/.test(canvasSource);
+  const hasStableRootHooks =
+    /data-testid="atlas-root"/.test(viewerSource) &&
+    /data-testid="atlas-canvas"/.test(canvasSource);
+  const noWebglReferences =
+    !/(WEBGL_debug_renderer_info|createContext\(\s*["']webgl|DeckGL|@deck\.gl|<canvas\b)/i.test(
+      `${canvasSource}\n${viewerSource}`,
+    );
+  const noWebglRegressionTest = /no-WebGL atlas renderer/.test(noWebglTestSource);
+
+  results.push(
+    hasSvgRenderer
+      ? pass(
+          "render-svg-initializes",
+          "render",
+          "Renderer initializes without WebGL",
+          "AtlasCanvas contains the current SVG renderer entry point.",
+        )
+      : warn(
+          "render-svg-initializes",
+          "render",
+          "Renderer initializes without WebGL",
+          "AtlasCanvas did not contain an SVG renderer entry point; update this validator for the active renderer.",
+        ),
+  );
+
+  results.push(
+    noWebglReferences
+      ? pass(
+          "render-no-webgl-runtime",
+          "render",
+          "No WebGL runtime path",
+          "Renderer source does not reference WebGL, canvas, deck.gl, or WEBGL_debug_renderer_info.",
+        )
+      : warn(
+          "render-no-webgl-runtime",
+          "render",
+          "No WebGL runtime path",
+          "Renderer source contains WebGL/canvas/deck.gl references; verify this is intentional.",
+        ),
+  );
+
+  results.push(
+    noWebglRegressionTest
+      ? pass(
+          "render-no-webgl-regression-test",
+          "render",
+          "No-WebGL regression test exists",
+          "tests/atlas/noWebglRenderer.test.ts guards against reintroducing WebGL/canvas renderer paths.",
+        )
+      : warn(
+          "render-no-webgl-regression-test",
+          "render",
+          "No-WebGL regression test exists",
+          "No no-WebGL renderer regression test was found.",
+        ),
+  );
+
+  results.push(
+    hasStableRootHooks
+      ? pass(
+          "render-test-hooks",
+          "render",
+          "Runtime test hooks are present",
+          "atlas-root and atlas-canvas data-testid hooks are present.",
+        )
+      : warn(
+          "render-test-hooks",
+          "render",
+          "Runtime test hooks are present",
+          "atlas-root or atlas-canvas data-testid hook is missing.",
+        ),
+  );
+
+  if (await isServerReachable(context.baseUrl)) {
+    const pageStartedAt = performance.now();
+    const response = await fetch(context.baseUrl);
+    const text = await response.text();
+    const pageMs = Number((performance.now() - pageStartedAt).toFixed(2));
+    const bytes = Buffer.byteLength(text);
+    results.push(
+      response.ok
+        ? pass(
+            "render-page-shell",
+            "render",
+            "Atlas page shell loads",
+            `Page shell returned ${response.status} in ${pageMs} ms; HTML payload ${bytes} bytes.`,
+            {
+              budget: BUDGETS.payloadBytes.initialSoftTarget,
+              comparison: "lte",
+              measured: bytes,
+              severity: "warn",
+              sotaBudget: ATLAS_BUDGETS.payloadBytes.initialAtlas.sota,
+              unit: "bytes",
+            },
+          )
+        : warn(
+            "render-page-shell",
+            "render",
+            "Atlas page shell loads",
+            `Page shell returned status ${response.status}.`,
+          ),
+    );
+
+    const points = await tryFetchJson(
+      scenarioUrl(context.baseUrl, context.view, {
+        bbox: {
+          minX: -0.8,
+          maxX: 0.8,
+          minY: -0.8,
+          maxY: 0.8,
+        },
+        endpoint: "points",
+        expectStatus: 200,
+        id: "render-high-zoom-bounded",
+        label: "High-zoom bounded point set",
+        zoom: 7.2,
+      }),
+    );
+    const count = Number(points.body?.count ?? 0);
+    results.push(
+      count <= BUDGETS.bounds.maxPointsPerResponse
+        ? pass(
+            "render-bounded-point-set",
+            "render",
+            "Renderer receives bounded point sets",
+            `High-zoom API returned ${count} points for a bounded viewport.`,
+            {
+              budget: BUDGETS.bounds.maxPointsPerResponse,
+              measured: count,
+              unit: "points",
+            },
+          )
+        : warn(
+            "render-bounded-point-set",
+            "render",
+            "Renderer receives bounded point sets",
+            `High-zoom API returned ${count} points, above renderer cap ${BUDGETS.bounds.maxPointsPerResponse}.`,
+            {
+              budget: BUDGETS.bounds.maxPointsPerResponse,
+              measured: count,
+              unit: "points",
+            },
+          ),
+    );
+  } else {
+    results.push(
+      skip(
+        "render-runtime-page-skip",
+        "render",
+        "Atlas page runtime check",
+        `Server not reachable at ${context.baseUrl}; static render checks still ran.`,
+      ),
+    );
+  }
+
+  results.push(...(await browserRuntimeChecks(context.baseUrl)));
+
+  return { validator: "render", results };
+}

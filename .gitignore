@@ -36,6 +36,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Benchmark artifacts
+benchmarks/results/*
+!benchmarks/results/.gitkeep
+
 # OS and editor files
 .DS_Store
 Thumbs.db

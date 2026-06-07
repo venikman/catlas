@@ -11,7 +11,20 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "generate:atlas": "tsx scripts/generate-atlas.ts",
-    "seed:atlas": "tsx scripts/seed-atlas.ts"
+    "seed:atlas": "tsx scripts/seed-atlas.ts",
+    "atlas:stats": "tsx scripts/atlas-stats.ts",
+    "atlas:smoke": "tsx scripts/atlas-smoke.ts",
+    "atlas:loadtest": "tsx scripts/atlas-loadtest.ts",
+    "atlas:analyze-queries": "tsx scripts/atlas-analyze-queries.ts",
+    "bench:atlas": "tsx benchmarks/run-benchmarks.ts --profile standard",
+    "bench:atlas:quick": "tsx benchmarks/run-benchmarks.ts --profile quick",
+    "bench:atlas:full": "tsx benchmarks/run-benchmarks.ts --profile full",
+    "bench:atlas:api": "tsx benchmarks/run-benchmarks.ts --profile quick --validators api,payload,search",
+    "bench:atlas:render": "tsx benchmarks/run-benchmarks.ts --profile quick --validators render,interaction,memory",
+    "bench:atlas:lod": "tsx benchmarks/run-benchmarks.ts --profile quick --validators lod",
+    "bench:atlas:db": "tsx benchmarks/run-benchmarks.ts --profile standard --validators dbQuery",
+    "bench:atlas:report": "tsx benchmarks/report-latest.ts",
+    "validate:atlas": "npm run typecheck && npm test && npm run build && npm run bench:atlas:quick -- --gate --start-server --server=start"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",
@@ -24,6 +37,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

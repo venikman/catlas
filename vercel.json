@@ -1,0 +1,10 @@
+{
+  "env": {
+    "ATLAS_DEMO_MODE": "true"
+  },
+  "build": {
+    "env": {
+      "ATLAS_DEMO_MODE": "true"
+    }
+  }
+}

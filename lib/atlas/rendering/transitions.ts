@@ -7,6 +7,8 @@ export function interpolatePointSet(
   next: AtlasPoint[],
   progress: number,
 ): RenderedAtlasPoint[] {
+  if (progress >= 1) return next;
+
   const eased = easeOutCubic(progress);
   const previousByEntity = new Map(previous.map((point) => [point.entityId, point]));
   const nextByEntity = new Set(next.map((point) => point.entityId));
