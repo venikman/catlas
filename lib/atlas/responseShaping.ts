@@ -23,17 +23,13 @@ function roundImportance(value: number): number {
 
 export function lightweightPoint(point: AtlasPoint): AtlasPoint {
   return {
-    id: point.id,
     entityId: point.entityId,
-    viewId: point.viewId,
-    viewSlug: point.viewSlug,
     x: roundCoord(point.x),
     y: roundCoord(point.y),
     clusterId: point.clusterId,
     label: truncateAtlasLabel(point.label),
     entityType: point.entityType,
     importance: roundImportance(point.importance),
-    payloadSummary: "",
     colorKey: point.colorKey,
   };
 }

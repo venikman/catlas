@@ -82,8 +82,8 @@ function updateCluster(point: AtlasPoint) {
   }
 
   clusters.set(key, {
-    id: `${point.viewId}-${point.clusterId}-lod-1`,
-    viewId: point.viewId,
+    id: `${point.viewId ?? "view"}-${point.clusterId}-lod-1`,
+    viewId: point.viewId ?? "view",
     viewSlug: point.viewSlug,
     clusterId: point.clusterId,
     label: point.clusterId
@@ -110,7 +110,8 @@ function updateDensity(point: AtlasPoint) {
   const tileSize = 14 / tileCount;
   const xTile = Math.max(0, Math.min(tileCount - 1, Math.floor((point.x - worldMin) / tileSize)));
   const yTile = Math.max(0, Math.min(tileCount - 1, Math.floor((point.y - worldMin) / tileSize)));
-  const key = `${point.viewId}:${z}:${xTile}:${yTile}:${point.clusterId}`;
+  const viewId = point.viewId ?? "view";
+  const key = `${viewId}:${z}:${xTile}:${yTile}:${point.clusterId}`;
   const existing = density.get(key);
   if (existing) {
     existing.pointCount += 1;
@@ -125,8 +126,8 @@ function updateDensity(point: AtlasPoint) {
   }
 
   density.set(key, {
-    id: `${point.viewId}-tile-${z}-${xTile}-${yTile}-${point.clusterId}`,
-    viewId: point.viewId,
+    id: `${viewId}-tile-${z}-${xTile}-${yTile}-${point.clusterId}`,
+    viewId,
     viewSlug: point.viewSlug,
     z,
     xTile,

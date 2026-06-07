@@ -330,10 +330,10 @@ export async function getAtlasEntity(
     entityId,
     label: first.label,
     entityType: first.entityType,
-    payloadSummary: first.payloadSummary,
+    payloadSummary: first.payloadSummary ?? "",
     metadata: first.metadata ?? {},
     views: rows.map((row) => ({
-      viewId: row.viewId,
+      viewId: row.viewId ?? "",
       viewSlug: row.viewSlug,
       x: row.x,
       y: row.y,

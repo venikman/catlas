@@ -31,7 +31,9 @@ describe("atlas response shaping", () => {
     const shaped = lightweightPoint(point());
 
     expect(shaped.metadata).toBeUndefined();
-    expect(shaped.payloadSummary).toBe("");
+    expect(shaped.payloadSummary).toBeUndefined();
+    expect(shaped.id).toBeUndefined();
+    expect(shaped.viewId).toBeUndefined();
     expect(shaped.entityId).toBe("entity-1");
     expect(shaped.x).toBe(1.1235);
     expect(shaped.y).toBe(2.9877);

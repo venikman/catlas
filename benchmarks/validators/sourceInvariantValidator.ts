@@ -38,8 +38,8 @@ export function scanSourceInvariants(root = process.cwd()): SourceInvariant[] {
   const routeHasLightweightPoint = /lightweightPoints/.test(pointsRoute);
   const shapingStripsMetadata =
     /lightweightPoint/.test(responseShaping) &&
-    /payloadSummary:\s*["']["']/.test(responseShaping) &&
-    !/metadata:\s*point\.metadata/.test(responseShaping);
+    !/metadata:\s*point\.metadata/.test(responseShaping) &&
+    !/payloadSummary:\s*point\.payloadSummary/.test(responseShaping);
   const runtimeConfigExists = existsSync(join(root, "lib/atlas/runtimeConfig.ts"));
   const visualConfigExists = existsSync(join(root, "lib/atlas/visualConfig.ts"));
   const lodConfigCentral =

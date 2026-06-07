@@ -17,9 +17,9 @@ export type AtlasBbox = {
 };
 
 export type AtlasPoint = {
-  id: string;
+  id?: string;
   entityId: string;
-  viewId: string;
+  viewId?: string;
   viewSlug?: string;
   x: number;
   y: number;
@@ -27,7 +27,7 @@ export type AtlasPoint = {
   label: string;
   entityType: string;
   importance: number;
-  payloadSummary: string;
+  payloadSummary?: string;
   metadata?: Record<string, unknown>;
   colorKey?: string;
 };

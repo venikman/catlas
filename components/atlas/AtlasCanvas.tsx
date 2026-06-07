@@ -604,7 +604,10 @@ export function AtlasCanvas({
               });
 
               return (
-                <g key={`${point.id}-${point.viewId}`} data-atlas-kind="point-group">
+                <g
+                  key={`${point.entityId}-${point.x}-${point.y}`}
+                  data-atlas-kind="point-group"
+                >
                   {style.haloOpacity > 0 ? (
                     <circle
                       cx={point.x}

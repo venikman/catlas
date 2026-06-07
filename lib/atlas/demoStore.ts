@@ -102,14 +102,14 @@ export function getDemoEntity(entityId: string): AtlasEntityDetails | null {
     entityId,
     label: first.label.replace(/\s+\d+$/, ""),
     entityType: first.entityType,
-    payloadSummary: first.payloadSummary,
+    payloadSummary: first.payloadSummary ?? "",
     metadata: {
       ...first.metadata,
       source: "development demo dataset",
       rows: rows.length,
     },
     views: rows.map((row) => ({
-      viewId: row.viewId,
+      viewId: row.viewId ?? "",
       viewSlug: row.viewSlug,
       x: row.x,
       y: row.y,
