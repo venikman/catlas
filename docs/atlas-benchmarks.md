@@ -97,6 +97,10 @@ API p95 local targets:
 - entity: good `<= 150 ms`, SOTA `<= 75 ms`
 - search: good `<= 300 ms`, SOTA `<= 150 ms`
 
+Live Postgres query p95 targets use the same starting thresholds under
+`ATLAS_BUDGETS.dbP95Ms`. They are reported separately from API latency so route
+overhead and query-plan regressions can be diagnosed independently.
+
 Payload and row caps:
 
 - initial atlas payload: good `<= 1 MB`, SOTA `<= 500 KB`
@@ -163,7 +167,13 @@ Database readiness:
 - density bounds expression index exists
 - trigram search index exists
 - representative EXPLAIN SQL exists
-- live DB connection check runs only when `DATABASE_URL` is configured
+- live DB connection, timing, row-bound, projection, and EXPLAIN-plan checks run only when `DATABASE_URL` is configured
+
+For local setup, migration, seeding, and live DB benchmark commands, see:
+
+```text
+docs/atlas-postgres-benchmarks.md
+```
 
 Scale readiness:
 

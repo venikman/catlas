@@ -1,5 +1,7 @@
-import { createReadStream } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createReadStream, existsSync } from "node:fs";
 import { createInterface } from "node:readline";
+import { join } from "node:path";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -11,7 +13,20 @@ function arg(name: string, fallback?: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : fallback;
 }
 
-const file = arg("file", ".atlas-data/synthetic-atlas-10000.jsonl");
+function flag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
+const count = arg("count");
+const file = arg(
+  "file",
+  count
+    ? `.atlas-data/synthetic-atlas-${count}.jsonl`
+    : ".atlas-data/synthetic-atlas-10000.jsonl",
+);
+const batchSize = Number.parseInt(arg("batchSize", "500") ?? "500", 10);
+const generateBatchSize = arg("generateBatchSize", "5000") ?? "5000";
+const seed = arg("seed", "170431") ?? "170431";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is required for seed:atlas.");
@@ -22,6 +37,48 @@ const pointRows: unknown[] = [];
 const clusterRows: unknown[] = [];
 const densityRows: unknown[] = [];
 let inserted = 0;
+
+function ensureGeneratedFile() {
+  if (!count || !file || (existsSync(file) && !flag("regenerate"))) return;
+
+  const tsx = join(
+    process.cwd(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "tsx.cmd" : "tsx",
+  );
+  const result = spawnSync(
+    tsx,
+    [
+      "scripts/generate-atlas.ts",
+      "--count",
+      count,
+      "--out",
+      file,
+      "--batchSize",
+      generateBatchSize,
+      "--seed",
+      seed,
+    ],
+    { stdio: "inherit" },
+  );
+
+  if (result.status !== 0) {
+    throw new Error(`Synthetic atlas generation failed with status ${result.status}.`);
+  }
+}
+
+async function resetAtlasTables() {
+  if (!flag("reset")) return;
+  if (!flag("yes")) {
+    throw new Error("Refusing destructive reset. Re-run with --reset --yes.");
+  }
+
+  await pool.query(
+    "truncate atlas_density_tiles, atlas_clusters, atlas_points, atlas_views cascade",
+  );
+  console.log("Reset atlas tables.");
+}
 
 async function flushPoints() {
   if (pointRows.length === 0) return;
@@ -139,7 +196,16 @@ async function flushDensity() {
   }
 }
 
+async function analyzeAtlasTables() {
+  await pool.query(
+    "analyze atlas_views; analyze atlas_points; analyze atlas_clusters; analyze atlas_density_tiles",
+  );
+}
+
 async function run() {
+  ensureGeneratedFile();
+  await resetAtlasTables();
+
   const rl = createInterface({
     input: createReadStream(file ?? ""),
     crlfDelay: Number.POSITIVE_INFINITY,
@@ -167,7 +233,7 @@ async function run() {
       );
     } else if (record.type === "point") {
       pointRows.push(record.payload);
-      if (pointRows.length >= 500) await flushPoints();
+      if (pointRows.length >= batchSize) await flushPoints();
     } else if (record.type === "cluster") {
       clusterRows.push(record.payload);
     } else if (record.type === "density_tile") {
@@ -178,6 +244,7 @@ async function run() {
   await flushPoints();
   await flushClusters();
   await flushDensity();
+  await analyzeAtlasTables();
   await pool.end();
   process.stdout.write("\n");
   console.log("Seed complete.");

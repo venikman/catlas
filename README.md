@@ -71,9 +71,9 @@ The default caps are:
 
 - density tiles: 240
 - clusters: 600
-- representative points: 1,200
+- representative points: 760
 - raw points: 5,000
-- search results: 25
+- search results: 20
 
 ## Synthetic Data
 
@@ -92,10 +92,25 @@ The generator streams JSONL to `.atlas-data/` and aggregates clusters/density su
 Seed Postgres:
 
 ```bash
-DATABASE_URL=postgres://user:pass@localhost:5432/catlas npm run seed:atlas -- --file .atlas-data/synthetic-atlas-100000.jsonl
+DATABASE_URL=postgres://user:pass@localhost:5432/catlas npm run seed:atlas -- --count 100000
 ```
 
 Apply `migrations/001_create_atlas_schema.sql` first. Apply `migrations/002_optional_postgis.sql` when PostGIS is available.
+
+For a disposable local Postgres benchmark database:
+
+```bash
+docker compose -f docker-compose.postgres.yml up -d
+export DATABASE_URL=postgres://atlas:atlas@localhost:54322/atlas_bench
+npm run db:migrate
+npm run atlas:seed -- --count 42500 --reset --yes
+npm run atlas:db:stats
+npm run bench:atlas:db
+```
+
+The local benchmark seed command uses 42,500 entities because the current
+4-view synthetic generator writes 170,000 point rows. Use `--count 170000` for
+a larger 170k-entity stress dataset.
 
 ## Local Run
 
@@ -159,6 +174,8 @@ ATLAS_BASE_URL=http://localhost:3002 npm run atlas:smoke
 ATLAS_BASE_URL=http://localhost:3002 npm run atlas:loadtest -- --iterations 90
 DATABASE_URL=postgres://user:pass@host:5432/catlas npm run atlas:analyze-queries
 ```
+
+`atlas:analyze-queries` reads `benchmarks/sql/explain-atlas-queries.sql`.
 
 Production notes:
 

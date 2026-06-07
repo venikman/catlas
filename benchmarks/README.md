@@ -64,7 +64,9 @@ Both reports include hard failures, SOTA misses, warnings/skips, recommended nex
 - Search safety: validates bounded lightweight search results, excessive-limit clamping, payload size, and lazy entity detail loading.
 - Source invariants: scans for server/client separation, centralized LOD/runtime config, and raw point guardrails.
 - Render safety: verifies the current no-WebGL SVG renderer path, bounded runtime point inputs, browser console errors/warnings, failed browser requests, initial atlas API payload size, and initial raw-point fetch avoidance when Playwright can launch a browser.
-- Database readiness: checks migrations, indexes, and representative EXPLAIN SQL; live DB timing runs only with `DATABASE_URL`.
+- Database readiness: checks migrations, indexes, and representative EXPLAIN SQL; live DB timing, row-bound, projection, and plan checks run only with `DATABASE_URL`.
 - Scale readiness: simulates 10M constraints through aggregate LOD paths and hard high-zoom caps.
 
 Browser frame-time, heap-growth, and screenshot comparisons are currently explicit SKIP/WARN checks until dedicated Playwright specs are wired. The quick render validator already captures browser console errors/warnings and failed network requests when a Playwright browser can launch.
+
+Live Postgres benchmark setup is documented in `docs/atlas-postgres-benchmarks.md`.

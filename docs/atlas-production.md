@@ -89,7 +89,7 @@ Important indexes:
 Representative query plans live in:
 
 ```text
-sql/analyze-atlas-queries.sql
+benchmarks/sql/explain-atlas-queries.sql
 ```
 
 Run:

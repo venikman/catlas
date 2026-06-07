@@ -21,6 +21,15 @@ export const ATLAS_BUDGETS = {
     search: { good: 300, sota: 150 },
   },
 
+  dbP95Ms: {
+    views: { good: 100, sota: 50 },
+    density: { good: 250, sota: 120 },
+    clusters: { good: 250, sota: 120 },
+    points: { good: 300, sota: 150 },
+    entity: { good: 150, sota: 75 },
+    search: { good: 300, sota: 150 },
+  },
+
   payloadBytes: {
     initialAtlas: { good: 1_000_000, sota: 500_000 },
     density: { good: 500_000, sota: 200_000 },
@@ -112,6 +121,18 @@ export const BUDGETS = {
     points: envNum("BENCH_API_POINTS_P95", ATLAS_BUDGETS.apiP95Ms.points.good),
     entity: envNum("BENCH_API_ENTITY_P95", ATLAS_BUDGETS.apiP95Ms.entity.good),
     search: envNum("BENCH_API_SEARCH_P95", ATLAS_BUDGETS.apiP95Ms.search.good),
+  },
+
+  dbLatencyMsP95: {
+    views: envNum("BENCH_DB_VIEWS_P95", ATLAS_BUDGETS.dbP95Ms.views.good),
+    density: envNum("BENCH_DB_DENSITY_P95", ATLAS_BUDGETS.dbP95Ms.density.good),
+    clusters: envNum(
+      "BENCH_DB_CLUSTERS_P95",
+      ATLAS_BUDGETS.dbP95Ms.clusters.good,
+    ),
+    points: envNum("BENCH_DB_POINTS_P95", ATLAS_BUDGETS.dbP95Ms.points.good),
+    entity: envNum("BENCH_DB_ENTITY_P95", ATLAS_BUDGETS.dbP95Ms.entity.good),
+    search: envNum("BENCH_DB_SEARCH_P95", ATLAS_BUDGETS.dbP95Ms.search.good),
   },
 
   payloadBytes: {

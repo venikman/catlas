@@ -9,6 +9,8 @@ describe("benchmark budgets", () => {
 
     expect(ATLAS_BUDGETS.apiP95Ms.views).toEqual({ good: 100, sota: 50 });
     expect(ATLAS_BUDGETS.apiP95Ms.points).toEqual({ good: 300, sota: 150 });
+    expect(ATLAS_BUDGETS.dbP95Ms.points).toEqual({ good: 300, sota: 150 });
+    expect(ATLAS_BUDGETS.dbP95Ms.search).toEqual({ good: 300, sota: 150 });
     expect(ATLAS_BUDGETS.payloadBytes.points).toEqual({
       good: 2_000_000,
       sota: 750_000,
@@ -23,6 +25,12 @@ describe("benchmark budgets", () => {
     );
     expect(BUDGETS.apiLatencyMsP95.search).toBe(
       ATLAS_BUDGETS.apiP95Ms.search.good,
+    );
+    expect(BUDGETS.dbLatencyMsP95.points).toBe(
+      ATLAS_BUDGETS.dbP95Ms.points.good,
+    );
+    expect(BUDGETS.dbLatencyMsP95.search).toBe(
+      ATLAS_BUDGETS.dbP95Ms.search.good,
     );
     expect(BUDGETS.payloadBytes.initialSoftTarget).toBe(
       ATLAS_BUDGETS.payloadBytes.initialAtlas.good,

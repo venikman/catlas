@@ -1,0 +1,21 @@
+services:
+  atlas-postgres:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64
+    container_name: catlas-postgres
+    environment:
+      POSTGRES_DB: atlas_bench
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: atlas
+    ports:
+      - "54322:5432"
+    volumes:
+      - catlas-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  catlas-postgres-data:

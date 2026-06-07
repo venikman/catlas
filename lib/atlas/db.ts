@@ -58,9 +58,9 @@ function mapView(row: Record<string, unknown>): AtlasView {
 
 function mapPoint(row: Record<string, unknown>): AtlasPoint {
   return {
-    id: String(row.id),
+    id: row.id ? String(row.id) : undefined,
     entityId: String(row.entity_id),
-    viewId: String(row.view_id),
+    viewId: row.view_id ? String(row.view_id) : undefined,
     viewSlug: row.view_slug ? String(row.view_slug) : undefined,
     x: Number(row.x),
     y: Number(row.y),
@@ -68,8 +68,9 @@ function mapPoint(row: Record<string, unknown>): AtlasPoint {
     label: String(row.label),
     entityType: String(row.entity_type),
     importance: Number(row.importance),
-    payloadSummary: String(row.payload_summary ?? ""),
-    metadata: (row.metadata as Record<string, unknown>) ?? {},
+    payloadSummary:
+      row.payload_summary === undefined ? undefined : String(row.payload_summary ?? ""),
+    metadata: (row.metadata as Record<string, unknown> | undefined) ?? undefined,
     colorKey: row.color_key ? String(row.color_key) : undefined,
   };
 }
@@ -164,18 +165,13 @@ export async function listAtlasPoints(input: {
   const result = await activePool.query(
     `
       select
-        p.id::text,
         p.entity_id,
-        p.view_id::text,
-        v.slug as view_slug,
         p.x,
         p.y,
         p.cluster_id,
         p.label,
         p.entity_type,
         p.importance,
-        '' as payload_summary,
-        null::jsonb as metadata,
         c.color_key
       from atlas_points p
       join atlas_views v on v.id = p.view_id
@@ -225,8 +221,7 @@ export async function listAtlasClusters(input: {
         c.bounds_max_x,
         c.bounds_min_y,
         c.bounds_max_y,
-        c.color_key,
-        c.metadata
+        c.color_key
       from atlas_clusters c
       join atlas_views v on v.id = c.view_id
       where v.slug = $1
