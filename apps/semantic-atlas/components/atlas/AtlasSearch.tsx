@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { searchAtlas } from "@/lib/atlas/api";
 import { ATLAS_CLIENT_CACHE } from "@/lib/atlas/cachePolicy";
 import { formatAtlasCount } from "@/lib/atlas/format";
@@ -31,6 +31,14 @@ export function AtlasSearch({
 }) {
   const [q, setQ] = useState("");
   const [mounted, setMounted] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function clearSearch() {
+    setQ("");
+    // The clear button unmounts as soon as q is empty, which would drop focus
+    // to <body>; keep focus on the input so keyboard/AT users can keep typing.
+    inputRef.current?.focus();
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -64,6 +72,7 @@ export function AtlasSearch({
         <div className="finder-control">
           <AtlasIcon name="search" size={17} />
           <input
+            ref={inputRef}
             data-testid="atlas-search-input"
             value={q}
             onChange={(event) => setQ(event.target.value)}
@@ -76,7 +85,7 @@ export function AtlasSearch({
               data-testid="atlas-search-clear"
               title="Clear search"
               aria-label="Clear search"
-              onClick={() => setQ("")}
+              onClick={clearSearch}
             >
               <AtlasIcon name="close" size={15} />
             </button>
