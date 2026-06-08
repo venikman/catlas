@@ -70,6 +70,17 @@ export function AtlasSearch({
             placeholder="Document/member ID, topic, or family"
             aria-label="Search by document/member ID, topic, or family"
           />
+          {q.length > 0 ? (
+            <button
+              type="button"
+              data-testid="atlas-search-clear"
+              title="Clear search"
+              aria-label="Clear search"
+              onClick={() => setQ("")}
+            >
+              <AtlasIcon name="close" size={15} />
+            </button>
+          ) : null}
           <button type="submit" title="Search map">
             <AtlasIcon name="search" size={15} />
             <span>Search</span>

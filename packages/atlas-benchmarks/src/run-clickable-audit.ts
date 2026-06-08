@@ -293,6 +293,14 @@ async function auditSearchAndInspector(page: Page, checks: AuditCheck[], waitMs:
 async function auditClusterClick(page: Page, checks: AuditCheck[], waitMs: number) {
   await clickLod(page, checks, "clusters", waitMs);
   const clusterHitTargets = page.locator('svg [data-atlas-kind="cluster-hit"]');
+  // Switching to the clusters LOD triggers a debounced viewport refetch, so the
+  // hit targets can be transiently absent right after the click (especially when
+  // arriving from a high-zoom state). Wait for the cluster layer to settle before
+  // asserting instead of trusting a fixed idle delay.
+  await clusterHitTargets
+    .first()
+    .waitFor({ state: "attached", timeout: 8000 })
+    .catch(() => undefined);
   const count = await clusterHitTargets.count();
   checks.push(
     count > 0
