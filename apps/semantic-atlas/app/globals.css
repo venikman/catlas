@@ -18,6 +18,10 @@ body {
   font-family: var(--font-sans);
 }
 
+nextjs-portal:empty {
+  pointer-events: none;
+}
+
 button,
 input,
 select,

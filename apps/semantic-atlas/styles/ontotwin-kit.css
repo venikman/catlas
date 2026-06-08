@@ -201,12 +201,17 @@
 .swatches span { width: 8px; height: 8px; border-radius: 1px; }
 .settings-panel input[type="range"] { accent-color: #2f6b43; }
 .toggle-control { display: flex; align-items: center; gap: 9px; position: relative; }
+button.toggle-control { width: 100%; border: 0; background: none; padding: 0; color: inherit; font: inherit; text-align: left; }
 .toggle-control input { position: absolute; opacity: 0; }
 .toggle-control span { width: 36px; height: 20px; border-radius: 999px; background: #aab5c2; padding: 2px; flex: 0 0 auto; }
 .toggle-control span::before { content: ""; display: block; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.18); transition: transform 150ms ease; }
-.toggle-control input:checked + span { background: #2f6b43; }
-.toggle-control input:checked + span::before { transform: translateX(16px); }
+.toggle-control[aria-pressed="true"] span { background: #2f6b43; }
+.toggle-control[aria-pressed="true"] span::before { transform: translateX(16px); }
 .toggle-control strong { color: #17202b; font-size: 12px; }
+
+.lod-controls { position: fixed; z-index: 22; left: 18px; bottom: 196px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 148px; }
+.lod-controls button { min-height: 28px; border: 1px solid #d8e1ea; border-radius: 4px; background: rgba(255,255,255,.92); color: #475569; font-size: 10px; font-weight: 700; text-transform: capitalize; }
+.lod-controls button.active, .lod-controls button[aria-pressed="true"] { background: #17202b; color: #fff; border-color: #17202b; }
 
 .map-controls { position: fixed; z-index: 22; left: 18px; bottom: 16px; display: grid; gap: 6px; }
 .map-controls output { width: 44px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; border-radius: 4px; background: rgba(18,28,39,.9); color: #fff; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; box-shadow: 0 1px 3px rgba(15,23,42,.12); }
@@ -233,6 +238,7 @@
 
 @media (max-width: 939px) {
   .atlas-rail { top: auto; left: 0; right: 0; bottom: 0; width: 100%; height: 292px; border-top: 1px solid #d9e1ea; border-left: 0; }
+  .lod-controls { left: 12px; bottom: 488px; width: 132px; }
   .map-controls { left: 12px; bottom: 308px; }
   .status-pill { left: 56px; right: 12px; bottom: 308px; max-width: none; }
   .table-panel { left: 12px; right: 12px; bottom: 354px; }
