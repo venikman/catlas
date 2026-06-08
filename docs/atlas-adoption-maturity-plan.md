@@ -40,7 +40,7 @@ In scope for this plan:
 | Level | Name | Promise | Required evidence |
 | --- | --- | --- | --- |
 | M0 | Demo baseline | Synthetic data demonstrates the concept. | Local app runs, demo-mode benchmarks pass or report explicit skips. |
-| M1 | Package adoption | Another React app can render shaped atlas data without importing app code. | `npm run example:atlas-consumer:build`, `npm run example:atlas-consumer:preview`, then `npm run bench:ui -- --url=http://127.0.0.1:4173 --root-selector='[data-testid="consumer-root"]' --graph-selector='[data-testid="semantic-atlas-map"]' --overlay-selector='[data-atlas-kind="density-label"]' --interaction=wheel-pan --gate`. |
+| M1 | Package adoption | Another React app can render shaped atlas data without importing app code. | `npm run build:packages`, `npm run example:atlas-consumer:build`, `npm run example:atlas-consumer:preview`, then `npm run bench:ui -- --url=http://127.0.0.1:4173 --root-selector='[data-testid="consumer-root"]' --graph-selector='[data-testid="semantic-atlas-map"]' --overlay-selector='[data-atlas-kind="density-label"]' --interaction=wheel-pan --gate`. |
 | M1.5 | Data-shape feasibility | A team can test whether product data makes sense as an atlas before investing in Postgres prep. | About 100 product rows mapped into a local JSON fixture, rendered through the consumer example or equivalent host, plus a screenshot or evaluator artifact. |
 | M2 | Real-data local adapter | A product can map its own source records into atlas views, points, clusters, density, and entity payloads. | Data-prep runbook, schema mapping, local seed or read-only staging data, `EXPLAIN ANALYZE` samples for database-backed paths, bounded API responses. |
 | M3 | Product-styled integration | Product teams can style data colors and host chrome around the atlas without forking renderer internals. | Data `colorKey` mapping, host `className`/`style` or shell-token examples, selector registry, visual audit screenshots or evaluator artifacts. |
@@ -72,6 +72,8 @@ Create the following adopter-facing docs. Each doc should include copyable comma
 
 | Artifact | Purpose | Proposed path |
 | --- | --- | --- |
+| Canonical backend integration (existing) | Source of truth for renderer types, Postgres schema, API shape, adapter pattern, seeding, and benchmark selectors. Adoption docs should link to this rather than duplicate it. | `packages/atlas-react/docs/backend-integration.md` |
+| Production readiness guide (existing) | Source of truth for scale, caching, indexes, observability, and production risk. M5 adoption docs should link to this rather than duplicate it. | `docs/atlas-production.md` |
 | Adoption index | Single navigation entry point with decision tree, M0-M5 checklist, and "read only when needed" routing. | `docs/adoption/index.md` |
 | Adoption quickstart | First successful renderer integration in another React app. | `docs/adoption/quickstart.md` |
 | Data contract | Thin pointer to the canonical backend integration doc plus shape-change and versioning notes. | `docs/adoption/data-contract.md` |
@@ -197,11 +199,14 @@ New tools to consider after docs are in place:
 - Pick the first external scale target from the existing 170k, 1M, and 10M tiers.
 - Decide the documentation policy: adoption docs wrap canonical docs unless a source-of-truth section is explicitly moved.
 - Record the contract-stability policy for exported renderer types before asking adopters to depend on them.
-- Restore or remove ghost `validate:atlas` references, fix `atlas-analyze-queries.ts` SQL path drift, and canonicalize report paths per tool.
+- Restore or remove ghost `validate:atlas` references.
+- Fix `atlas-analyze-queries.ts` SQL path drift.
+- Canonicalize report paths per tool.
+- Add the `docs/adoption/index.md` decision tree skeleton before expanding the rest of the adoption-doc spine.
 
 Done when:
 
-- Phase 1 has a named pilot, a skill format, a scale target, and no known broken command/path references.
+- Phase 1 has a named pilot adopter, a canonical `.cursor/skills/` format, a selected 170k/1M/10M scale target, a doc wrap-versus-supersede policy, an exported-type contract policy, and no known broken command/path references.
 
 ### Phase 0.5: Minimum viable adoption kit
 
