@@ -1,0 +1,155 @@
+/* ============================================================================
+   OntoTwin Atlas — Colors & Type Foundations
+   Source: venikman/member-ontology-atlas (src/styles.css, src/memberAtlas.js)
+   A dense semantic-atlas data-viz product for a health-insurance member ontology.
+   Load this file, then use the semantic vars below in your own components.
+   ============================================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+:root {
+  /* ---- Type family ----------------------------------------------------- */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  /* No serif or display face is used in product. Inter carries everything. */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- Ink / foreground ------------------------------------------------- */
+  --fg-1: #17202b; /* primary ink — headings, values, point detail            */
+  --fg-2: #284254; /* secondary ink — control labels, rail body text          */
+  --fg-3: #5f6b7a; /* muted body — descriptions, hints                        */
+  --fg-4: #667085; /* meta / output text                                      */
+  --fg-5: #64748b; /* slate captions, table headers                           */
+  --fg-6: #7a8797; /* faint uppercase micro-labels                            */
+  --fg-on-accent: #ffffff;
+
+  /* ---- Brand green (primary action / selected "tool" state) ------------- */
+  --green-900: #244d31; /* active label text                                  */
+  --green-800: #24472c; /* eyebrow text on glass surfaces                     */
+  --green-700: #2f6b43; /* active border, toggle-on                           */
+  --green-600: #345a38; /* PRIMARY — finder button fill, accents             */
+  --green-500: #4f8f5d; /* focus border on finder                            */
+  --green-tint: #eaf4ee; /* active "tool"/tab fill                            */
+  --green-line: #d8e2da; /* green-tinted hairline on pill controls           */
+
+  /* ---- Teal / cyan (focus rings + "lens/filter/family" selected state) -- */
+  --teal-700: #0e7490; /* lens active border, link-style action text         */
+  --teal-600: #0891b2; /* focus accent                                       */
+  --teal-650: #0f78a5; /* inset focus outline                                */
+  --teal-tint: #eef7fb; /* lens/filter active fill                           */
+  --teal-tint-2: #eef7fb;
+
+  /* ---- Surfaces --------------------------------------------------------- */
+  --surface-map: #ffffff;       /* the full white map — primary surface       */
+  --surface-rail: #fbfaf7;      /* warm off-white right rail                   */
+  --surface-panel: #f8fafc;     /* cool panel / inactive button bg            */
+  --surface-card: #ffffff;      /* preview cards, table                        */
+  --surface-input-green: #fbfdfb; /* pill input bg (warm)                      */
+  --surface-input-blue: #fbfdff;  /* layer/preset button bg (cool)            */
+  --surface-glass: rgba(255, 255, 255, 0.92); /* floating finder              */
+  --surface-glass-soft: rgba(255, 255, 255, 0.74); /* map badge               */
+  --surface-overlay: rgba(255, 255, 255, 0.98); /* tooltip, table, dropdown   */
+  --surface-zoom: rgba(18, 28, 39, 0.9); /* dark zoom readout                  */
+
+  /* ---- Borders / hairlines --------------------------------------------- */
+  --line-1: #d8e1ea; /* default control border (cool)                         */
+  --line-2: #d6e0ea; /* dropdown / lens border                                */
+  --line-3: #cfd8e3; /* input border                                          */
+  --line-4: #e5eaf0; /* faint inner divider                                   */
+  --line-5: #edf2f7; /* table row rule                                        */
+  --line-warm: #d7d9d2; /* warm rail border                                   */
+  --line-dashed: #d8d8d1; /* dashed rail-section divider                      */
+  --line-green-glass: rgba(52, 90, 56, 0.18); /* finder border               */
+
+  /* ---- Radii ------------------------------------------------------------ */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-glass: 14px;  /* floating finder card                              */
+  --radius-pill: 999px;  /* finder input, primary button, badge, toggle      */
+
+  /* ---- Shadows / elevation ---------------------------------------------- */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.08);   /* preview card          */
+  --shadow-chip: 0 1px 3px rgba(15, 23, 42, 0.10);   /* map controls          */
+  --shadow-badge: 0 8px 24px rgba(31, 41, 55, 0.10); /* map badge             */
+  --shadow-pop: 0 10px 28px rgba(15, 23, 42, 0.16);  /* dropdown              */
+  --shadow-finder: 0 12px 36px rgba(31, 41, 55, 0.15); /* glass finder        */
+  --shadow-drawer: 0 16px 40px rgba(15, 23, 42, 0.16); /* table drawer        */
+  --shadow-tooltip: 0 12px 32px rgba(15, 23, 42, 0.18);
+  --blur-glass: blur(12px); /* @kind other */
+
+  /* ---- Map label treatment (canvas) ------------------------------------ */
+  --label-fill: rgba(83, 91, 95, 0.98);
+  --label-halo: rgba(255, 255, 255, 0.98);
+  --label-shadow: rgba(31, 41, 55, 0.55);
+
+  /* ====================================================================== */
+  /* SEMANTIC TYPE TOKENS                                                    */
+  /* Product type is dense, utilitarian, heavy-weight. No large display.     */
+  /* ====================================================================== */
+  --h2: 800 15px/1.1 var(--font-sans);    /* rail title (sidecar-header h2)  */
+  --h3: 700 17px/1.2 var(--font-sans);    /* preview-card title              */
+  --title-md: 900 13px/1 var(--font-sans);/* badge / table header strong     */
+  --body: 400 13px/1.45 var(--font-sans); /* preview body copy               */
+  --label: 850 12px/1 var(--font-sans);   /* control labels, tabs, buttons   */
+  --label-sm: 800 11px/1.3 var(--font-sans); /* tool buttons, hints          */
+  --eyebrow: 900 10px/1 var(--font-sans); /* UPPERCASE section eyebrow       */
+  --micro: 800 9px/1 var(--font-sans);    /* dt micro-labels                 */
+  --num: 800 11px/1 var(--font-sans);     /* tabular numerics (zoom readout) */
+}
+
+/* ---- Eyebrow helper ----------------------------------------------------- */
+.eyebrow {
+  font: var(--eyebrow);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green-800);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   ONTOLOGY CATEGORICAL PALETTE
+   24 topic colors, grouped by FPF family. Used for the point cloud,
+   legend swatches, and family-coded UI. This is a wide perceptual
+   categorical palette (Glasbey/Tableau-extended style), NOT a brand ramp.
+   ============================================================================ */
+:root {
+  /* Thing family (clinical & member context) */
+  --topic-social-drivers: #B65141;
+  --topic-behavioral-health: #A4E804;
+  --topic-cardiometabolic: #8FB0FF;
+  --topic-respiratory: #6B002C;
+  --topic-kidney: #3B5DFF;
+  --topic-oncology: #1CE6FF;
+  --topic-maternal-child: #FF9408;
+
+  /* Description family */
+  --topic-risk-adjustment: #549E79;
+  --topic-member-experience: #D790FF;
+  --topic-interoperability: #0089A3;
+
+  /* Specification family */
+  --topic-eligibility: #B79762;
+  --topic-benefits: #009271;
+  --topic-network: #006FA6;
+
+  /* Work family */
+  --topic-pharmacy: #5B4534;
+  --topic-care-gaps: #E83000;
+  --topic-care-management: #008941;
+  --topic-prior-auth: #BA0900;
+
+  /* Evidence family */
+  --topic-claims: #004D43;
+  --topic-utilization: #6F0062;
+  --topic-financial-risk: #4FC601;
+
+  /* FPF family — neon claim-state set */
+  --topic-promise: #00FECF;
+  --topic-ability: #FFB500;
+  --topic-performance: #BC23FF;
+  --topic-evidence: #CC0744;
+}

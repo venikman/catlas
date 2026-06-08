@@ -1,0 +1,41 @@
+{
+  "description": "OntoTwin Atlas ontology categorical palette — 24 topic colors grouped by the six FPF families. Source: src/memberAtlas.js (ONTOLOGY_CLUSTERS).",
+  "families": {
+    "Thing": [
+      { "key": "social-drivers", "label": "Social drivers", "color": "#B65141" },
+      { "key": "behavioral-health", "label": "Behavioral health", "color": "#A4E804" },
+      { "key": "cardiometabolic", "label": "Cardiometabolic", "color": "#8FB0FF" },
+      { "key": "respiratory", "label": "Respiratory", "color": "#6B002C" },
+      { "key": "kidney", "label": "Kidney disease", "color": "#3B5DFF" },
+      { "key": "oncology", "label": "Oncology", "color": "#1CE6FF" },
+      { "key": "maternal-child", "label": "Maternal and child", "color": "#FF9408" }
+    ],
+    "Description": [
+      { "key": "risk-adjustment", "label": "Risk adjustment", "color": "#549E79" },
+      { "key": "member-experience", "label": "Member experience", "color": "#D790FF" },
+      { "key": "interoperability", "label": "Interoperability", "color": "#0089A3" }
+    ],
+    "Specification": [
+      { "key": "eligibility", "label": "Eligibility and coverage", "color": "#B79762" },
+      { "key": "benefits", "label": "Benefit design", "color": "#009271" },
+      { "key": "network", "label": "Provider network", "color": "#006FA6" }
+    ],
+    "Work": [
+      { "key": "pharmacy", "label": "Pharmacy and formulary", "color": "#5B4534" },
+      { "key": "care-gaps", "label": "Quality and care gaps", "color": "#E83000" },
+      { "key": "care-management", "label": "Care management", "color": "#008941" },
+      { "key": "prior-auth", "label": "Prior authorization", "color": "#BA0900" }
+    ],
+    "Evidence": [
+      { "key": "claims", "label": "Claims history", "color": "#004D43" },
+      { "key": "utilization", "label": "Utilization pattern", "color": "#6F0062" },
+      { "key": "financial-risk", "label": "Financial risk", "color": "#4FC601" }
+    ],
+    "FPF": [
+      { "key": "promise", "label": "Promise layer", "color": "#00FECF" },
+      { "key": "ability", "label": "Ability layer", "color": "#FFB500" },
+      { "key": "performance", "label": "Performance layer", "color": "#BC23FF" },
+      { "key": "evidence", "label": "Evidence layer", "color": "#CC0744" }
+    ]
+  }
+}
