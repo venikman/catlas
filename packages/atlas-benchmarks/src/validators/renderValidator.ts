@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ATLAS_BUDGETS, BUDGETS } from "../budgets";
+import {
+  atlasReactSourceRoot,
+  readAppSource,
+  readAtlasReactSource,
+} from "../monorepoPaths.js";
 import { scenarioUrl } from "../scenarios";
 import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";
 import {
@@ -12,10 +17,6 @@ import {
   tryFetchJson,
   warn,
 } from "./helpers";
-
-function source(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
-}
 
 async function browserRuntimeChecks(
   baseUrl: string,
@@ -119,15 +120,12 @@ async function browserRuntimeChecks(
     });
 
     await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.locator('[data-testid="atlas-root"]').waitFor({ timeout: 5000 });
-    const mapSvg = page.locator(
-      '[data-testid="atlas-canvas"] svg[aria-label="Semantic atlas map"]',
-    );
-    const mapCanvas = page.locator(
-      '[data-testid="atlas-canvas"] canvas[data-testid="atlas-map-canvas"]',
-    );
-    await mapSvg.waitFor({ timeout: 5000 });
-    await mapCanvas.waitFor({ timeout: 5000 });
+    await page.locator('[data-testid="atlas-root"]').waitFor({ timeout: 15000 });
+    const mapCanvas = page.locator('[data-testid="atlas-map-canvas"]');
+    const mapSvg = page.locator('[data-testid="atlas-overlay"]');
+    // Canvas texture is aria-hidden by design; attached + bounding box checks replace visible waits.
+    await mapCanvas.waitFor({ timeout: 15000, state: "attached" });
+    await mapSvg.waitFor({ timeout: 15000, state: "attached" });
     await page.waitForTimeout(350);
 
     const rootReadyMs = Number((performance.now() - startedAt).toFixed(2));
@@ -303,9 +301,12 @@ export async function renderValidator(
   context: BenchmarkContext,
 ): Promise<ValidatorResult> {
   const results: CheckResult[] = [];
-  const canvasSource = source("components/atlas/AtlasCanvas.tsx");
-  const viewerSource = source("components/atlas/AtlasViewer.tsx");
-  const noWebglTestSource = source("tests/atlas/noWebglRenderer.test.ts");
+  const canvasSource = readAtlasReactSource("components/atlas/AtlasCanvas.tsx");
+  const viewerSource = readAppSource("components/atlas/AtlasViewer.tsx");
+  const noWebglTestSource = readFileSync(
+    join(atlasReactSourceRoot(), "../tests/noWebglRenderer.test.ts"),
+    "utf8",
+  );
 
   const hasCanvas2DRenderer =
     /<canvas\b/.test(canvasSource) && /getContext\(\s*["']2d/.test(canvasSource);

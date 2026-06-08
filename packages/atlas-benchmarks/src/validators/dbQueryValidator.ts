@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
 import { ATLAS_BUDGETS, BUDGETS } from "../budgets";
+import { appRoot, monorepoRoot } from "../monorepoPaths.js";
 import { computeBbox } from "../scenarios";
 import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";
 import { percentiles } from "../types";
@@ -36,8 +37,8 @@ type DbScenario = {
   sql: string;
 };
 
-function file(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
+function file(absolutePath: string): string {
+  return readFileSync(absolutePath, "utf8");
 }
 
 function collectPlan(node: PlanNode, finding: PlanFinding): void {
@@ -311,13 +312,16 @@ export async function dbQueryValidator(
   context: BenchmarkContext,
 ): Promise<ValidatorResult> {
   const results: CheckResult[] = [];
-  const migration001 = "migrations/001_create_atlas_schema.sql";
-  const migration002 = "migrations/002_optional_postgis.sql";
-  const migration003 = "migrations/003_harden_atlas_indexes.sql";
-  const explainSql = "benchmarks/sql/explain-atlas-queries.sql";
+  const app = appRoot();
+  const migration001 = join(app, "migrations/001_create_atlas_schema.sql");
+  const migration002 = join(app, "migrations/002_optional_postgis.sql");
+  const migration003 = join(app, "migrations/003_harden_atlas_indexes.sql");
+  const explainSql = join(
+    monorepoRoot(),
+    "packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql",
+  );
   const hasBaselineMigrations =
-    existsSync(join(process.cwd(), migration001)) &&
-    existsSync(join(process.cwd(), migration003));
+    existsSync(migration001) && existsSync(migration003);
 
   if (hasBaselineMigrations) {
     const schema = `${file(migration001)}\n${file(migration003)}`;
@@ -420,35 +424,35 @@ export async function dbQueryValidator(
   }
 
   results.push(
-    existsSync(join(process.cwd(), migration002))
+    existsSync(migration002)
       ? pass(
           "db-postgis-migration-present",
           "db",
           "Optional PostGIS migration exists",
-          `${migration002} is present; PostGIS remains optional for local DB benchmarks.`,
+          "migrations/002_optional_postgis.sql is present; PostGIS remains optional for local DB benchmarks.",
           { severity: "warn" },
         )
       : warn(
           "db-postgis-migration-present",
           "db",
           "Optional PostGIS migration exists",
-          `${migration002} is missing.`,
+          "migrations/002_optional_postgis.sql is missing.",
         ),
   );
 
   results.push(
-    existsSync(join(process.cwd(), explainSql))
+    existsSync(explainSql)
       ? pass(
           "db-explain-sql-present",
           "db",
           "Representative EXPLAIN SQL exists",
-          `${explainSql} is present for database query-plan inspection.`,
+          "packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql is present for database query-plan inspection.",
         )
       : warn(
           "db-explain-sql-present",
           "db",
           "Representative EXPLAIN SQL exists",
-          `${explainSql} is missing.`,
+          "packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql is missing.",
         ),
   );
 
