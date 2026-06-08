@@ -69,5 +69,6 @@ describe("atlas clickable audit", () => {
     expect(rootManifest.scripts?.["bench:atlas:clickable"]).toContain(
       "@catlas/atlas-benchmarks",
     );
+    expect(rootManifest.scripts?.["bench:atlas:clickable"]).toContain(" --");
   });
 });

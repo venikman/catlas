@@ -18,7 +18,7 @@
     "bench:atlas": "npm run quick -w @catlas/atlas-benchmarks -- --profile standard",
     "bench:atlas:quick": "npm run quick -w @catlas/atlas-benchmarks -- --profile quick",
     "bench:atlas:full": "npm run quick -w @catlas/atlas-benchmarks -- --profile full",
-    "bench:atlas:clickable": "npm run clickable -w @catlas/atlas-benchmarks",
+    "bench:atlas:clickable": "npm run clickable -w @catlas/atlas-benchmarks --",
     "example:atlas-consumer:build": "npm run build -w examples/atlas-consumer",
     "example:atlas-consumer:preview": "npm run preview -w examples/atlas-consumer -- --port 4173",
     "dev:example": "npm run dev -w @catlas/semantic-atlas",
