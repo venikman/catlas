@@ -1,6 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import {
+  SemanticAtlasMap,
+  ATLAS_INITIAL_LAYERS,
+  ATLAS_INITIAL_VIEWPORT,
+  type AtlasViewportState,
+  type LayerToggles,
+} from "@catlas/atlas-react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -11,17 +17,23 @@ import {
   HelpCircle,
   Keyboard,
   Languages,
+  Layers3,
   ListFilter,
   Settings,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { fetchAtlasViews, fetchViewportData } from "@/lib/atlas/api";
 import { ATLAS_CLIENT_CACHE, viewportCachePolicy } from "@/lib/atlas/cachePolicy";
 import { getLodForZoom, zoomBandForZoom } from "@/lib/atlas/lod";
 import { expandBbox } from "@/lib/atlas/math";
 import { atlasQueryKeys } from "@/lib/atlas/queryKeys";
-import { ATLAS_VISUAL_CONFIG, clampAtlasZoom } from "@/lib/atlas/visualConfig";
+import {
+  ATLAS_VISUAL_CONFIG,
+  atlasZoomToDisplayZoom,
+  displayZoomToAtlasZoom,
+  clampAtlasZoom,
+} from "@/lib/atlas/visualConfig";
 import type {
   AtlasBbox,
   AtlasCluster,
@@ -35,43 +47,6 @@ import { AtlasControls } from "./AtlasControls";
 import { AtlasDebugPanel } from "./AtlasDebugPanel";
 import { AtlasSearch } from "./AtlasSearch";
 import { AtlasSidePanel } from "./AtlasSidePanel";
-
-const AtlasCanvas = dynamic(
-  () => import("./AtlasCanvas").then((module) => module.AtlasCanvas),
-  { ssr: false },
-);
-
-export type AtlasViewportState = {
-  centerX: number;
-  centerY: number;
-  zoom: number;
-};
-
-export type LayerToggles = {
-  density: boolean;
-  clusters: boolean;
-  points: boolean;
-  labels: boolean;
-  boundaries: boolean;
-  heat: boolean;
-  links: boolean;
-};
-
-const INITIAL_VIEWPORT: AtlasViewportState = {
-  centerX: 1.1,
-  centerY: 0.42,
-  zoom: 3.08,
-};
-
-const INITIAL_LAYERS: LayerToggles = {
-  density: true,
-  clusters: true,
-  points: false,
-  labels: true,
-  boundaries: true,
-  heat: false,
-  links: false,
-};
 
 const DEBUG_PANEL_ENABLED = process.env.NEXT_PUBLIC_ATLAS_DEBUG === "true";
 
@@ -180,16 +155,18 @@ function extractDensityTiles(data: unknown): AtlasDensityTile[] {
 
 function AtlasViewerInner() {
   const [selectedView, setSelectedView] = useState("research-domains");
-  const [viewport, setViewport] = useState<AtlasViewportState>(INITIAL_VIEWPORT);
-  const [layers, setLayers] = useState<LayerToggles>(INITIAL_LAYERS);
+  const [viewport, setViewport] = useState<AtlasViewportState>(ATLAS_INITIAL_VIEWPORT);
+  const [layers, setLayers] = useState<LayerToggles>(ATLAS_INITIAL_LAYERS);
   const [hoveredPoint, setHoveredPoint] = useState<AtlasPoint | null>(null);
   const [hoveredCluster, setHoveredCluster] = useState<AtlasCluster | null>(null);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
+  const [densityContextTiles, setDensityContextTiles] = useState<AtlasDensityTile[]>([]);
+  const [clusterContext, setClusterContext] = useState<AtlasCluster[]>([]);
+  const [pointContext, setPointContext] = useState<AtlasPoint[]>([]);
   const [targetMarker, setTargetMarker] = useState<AtlasTargetMarker | null>(null);
   const [requestCount, setRequestCount] = useState(0);
   const [clusterInspectorDismissed, setClusterInspectorDismissed] = useState(false);
-  const [, startTransition] = useTransition();
   const frameStats = useFrameStats();
 
   const viewsQuery = useQuery({
@@ -233,6 +210,12 @@ function AtlasViewerInner() {
   const densityTiles = extractDensityTiles(viewportQuery.data);
   const clusters = extractClusters(viewportQuery.data);
   const points = extractPoints(viewportQuery.data);
+  const canvasDensityTiles =
+    densityTiles.length > 0 ? densityTiles : densityContextTiles;
+  const canvasClusters =
+    clusters.length > 0 || lod.layer !== "points" ? clusters : clusterContext;
+  const canvasPoints =
+    points.length > 0 || lod.layer !== "points" ? points : pointContext;
   const clientRequestMs =
     viewportQuery.data && "clientRequestMs" in viewportQuery.data
       ? Number(viewportQuery.data.clientRequestMs)
@@ -245,18 +228,35 @@ function AtlasViewerInner() {
     viewportQuery.data && "truncated" in viewportQuery.data
       ? Boolean(viewportQuery.data.truncated)
       : false;
-  const featuredCluster = clusterInspectorDismissed
-    ? null
-    : clusters.find((cluster) => cluster.clusterId === selectedClusterId) ??
-      clusters.find((cluster) => cluster.clusterId === "graph-neural-networks") ??
-      clusters[0] ??
-      null;
+  const featuredCluster =
+    clusterInspectorDismissed || !selectedClusterId
+      ? null
+      : canvasClusters.find((cluster) => cluster.clusterId === selectedClusterId) ?? null;
+  const inspectorOpen = Boolean(selectedEntityId || featuredCluster);
 
   useEffect(() => {
     if (viewportQuery.data) {
       setRequestCount((current) => current + 1);
     }
   }, [viewportQuery.data]);
+
+  useEffect(() => {
+    if (densityTiles.length > 0) {
+      setDensityContextTiles(densityTiles);
+    }
+  }, [densityTiles]);
+
+  useEffect(() => {
+    if (clusters.length > 0) {
+      setClusterContext(clusters);
+    }
+  }, [clusters]);
+
+  useEffect(() => {
+    if (points.length > 0) {
+      setPointContext(points);
+    }
+  }, [points]);
 
   function showTargetMarker(marker: AtlasTargetMarker) {
     setTargetMarker(marker);
@@ -266,17 +266,18 @@ function AtlasViewerInner() {
   }
 
   function handleSelectView(nextView: string) {
-    startTransition(() => {
-      setSelectedView(nextView);
-      setClusterInspectorDismissed(false);
-      setSelectedClusterId(null);
-      setLayers((current) => ({
-        ...current,
-        density: true,
-        clusters: true,
-        labels: true,
-      }));
-    });
+    setSelectedView(nextView);
+    setDensityContextTiles([]);
+    setClusterContext([]);
+    setPointContext([]);
+    setClusterInspectorDismissed(false);
+    setSelectedClusterId(null);
+    setLayers((current) => ({
+      ...current,
+      density: true,
+      clusters: true,
+      labels: true,
+    }));
   }
 
   function handleSearchResult(result: AtlasSearchResult) {
@@ -330,10 +331,10 @@ function AtlasViewerInner() {
 
   return (
     <main
-      className="relative h-screen w-screen overflow-hidden bg-[#f8f6f0]"
+      className="relative h-screen w-screen overflow-hidden bg-[#efefec]"
       data-testid="atlas-root"
     >
-      <aside className="absolute inset-y-0 left-0 z-20 flex w-[72px] flex-col border-r border-slate-200/80 bg-white/72 px-3 py-5 backdrop-blur-xl sm:w-[176px] sm:px-5 sm:py-6">
+      <aside className="hidden">
         <div className="flex items-center gap-3">
           <div className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 bg-white">
             <Activity size={17} />
@@ -434,11 +435,11 @@ function AtlasViewerInner() {
         </div>
       </aside>
 
-      <section className="absolute inset-y-0 left-[72px] right-0 sm:left-[176px]">
-        <AtlasCanvas
+      <section className="absolute inset-0">
+        <SemanticAtlasMap
           bbox={bbox}
-          clusters={clusters}
-          densityTiles={densityTiles}
+          clusters={canvasClusters}
+          densityTiles={canvasDensityTiles}
           hoveredEntityId={hoveredPoint?.entityId ?? null}
           layers={layers}
           lod={lod.layer}
@@ -449,27 +450,99 @@ function AtlasViewerInner() {
             setSelectedEntityId(point.entityId);
             setSelectedClusterId(point.clusterId);
           }}
-          points={points}
+          onViewportChange={setViewport}
+          points={canvasPoints}
           selectedEntityId={selectedEntityId}
-          setViewport={setViewport}
           targetMarker={targetMarker}
           viewport={viewport}
         />
 
         <div className="pointer-events-none absolute inset-0 z-10">
-          <div className="pointer-events-auto absolute left-2 right-2 top-3 sm:left-5 sm:right-auto sm:top-5">
+          <header className="pointer-events-auto absolute inset-x-0 top-0 z-20 flex h-[68px] items-center gap-4 border-b border-slate-200/80 bg-white/88 px-4 shadow-[0_1px_10px_rgba(15,23,42,0.04)] backdrop-blur-xl sm:px-5">
+            <div className="flex min-w-[172px] items-center gap-3">
+              <div className="grid h-9 w-9 place-items-center rounded-full border border-slate-300 bg-white">
+                <Activity size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-[15px] font-semibold tracking-normal text-slate-950">
+                  Semantic Atlas
+                </div>
+                <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                  {stats ? `${stats.pointRows.toLocaleString()} points` : "Loading"}
+                </div>
+              </div>
+            </div>
+
+            <nav className="hidden min-w-0 flex-1 items-center gap-1 md:flex">
+              <TopViewButton
+                active={selectedView === "research-domains"}
+                label="All Views"
+                viewSlug="research-domains"
+                onClick={() => handleSelectView("research-domains")}
+              />
+              {views
+                .filter((view) => view.slug !== "research-domains")
+                .slice(0, 3)
+                .map((view) => (
+                  <TopViewButton
+                    key={view.slug}
+                    active={selectedView === view.slug}
+                    label={view.name}
+                    viewSlug={view.slug}
+                    onClick={() => handleSelectView(view.slug)}
+                  />
+                ))}
+            </nav>
+
+            <div className="ml-auto hidden items-center gap-1 xl:flex">
+              <div className="mr-1 flex items-center gap-1 rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                <Layers3 size={13} />
+                Layers
+              </div>
+              {Object.entries(layers).map(([key, enabled]) => (
+                <LayerPill
+                  key={key}
+                  active={enabled}
+                  label={key}
+                  onClick={() =>
+                    setLayers((current) => ({
+                      ...current,
+                      [key]: !current[key as keyof LayerToggles],
+                    }))
+                  }
+                />
+              ))}
+            </div>
+
+            <button
+              className="atlas-control grid h-10 w-10 shrink-0 place-items-center rounded-md opacity-45"
+              aria-label="Help"
+              disabled
+            >
+              <HelpCircle size={17} />
+            </button>
+          </header>
+
+          <div className="pointer-events-auto absolute left-3 right-3 top-[78px] sm:left-auto sm:right-5 sm:w-[620px]">
             <AtlasSearch
               selectedView={selectedView}
               onResultSelect={handleSearchResult}
             />
           </div>
 
-          <div className="pointer-events-auto absolute right-2 top-[92px] hidden flex-col gap-2 sm:right-[328px] sm:top-5 sm:flex">
-            <AtlasControls onZoomStep={handleZoomStep} />
+          <div
+            className={`pointer-events-auto absolute right-3 top-[152px] hidden flex-col gap-2 sm:flex ${
+              inspectorOpen ? "sm:right-[328px]" : "sm:right-5"
+            }`}
+          >
+            <AtlasControls
+              onHome={() => setViewport(ATLAS_INITIAL_VIEWPORT)}
+              onZoomStep={handleZoomStep}
+            />
           </div>
 
           {DEBUG_PANEL_ENABLED ? (
-            <div className="pointer-events-auto absolute left-5 top-[430px] hidden sm:block">
+            <div className="pointer-events-auto absolute left-5 top-[88px] hidden sm:block">
               <AtlasDebugPanel
                 activeView={selectedView}
                 animationActive={Boolean(targetMarker)}
@@ -509,7 +582,7 @@ function AtlasViewerInner() {
             </div>
           ) : null}
 
-          <div className="pointer-events-auto absolute inset-x-2 bottom-2 sm:inset-x-5 sm:bottom-5">
+          <div className="pointer-events-auto absolute bottom-3 left-1/2 w-[min(620px,calc(100%-24px))] -translate-x-1/2 sm:bottom-4">
             <LodStrip
               active={lod.layer}
               zoom={viewport.zoom}
@@ -536,7 +609,7 @@ function AtlasViewerInner() {
 
       <AtlasSidePanel
         cluster={featuredCluster}
-        neighborClusters={clusters}
+        neighborClusters={canvasClusters}
         entityId={selectedEntityId}
         onClose={() => {
           if (selectedEntityId) {
@@ -587,6 +660,62 @@ function ViewButton({
   );
 }
 
+function TopViewButton({
+  active,
+  label,
+  viewSlug,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  viewSlug: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      className={`h-9 max-w-[150px] truncate rounded-md px-3 text-[12px] font-medium transition ${
+        active
+          ? "bg-slate-900 text-white shadow-sm"
+          : "text-slate-600 hover:bg-white hover:text-slate-950"
+      }`}
+      data-atlas-kind="view-button"
+      data-atlas-view={viewSlug}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+function LayerPill({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      className={`h-8 rounded-md px-2.5 text-[11px] font-medium capitalize transition ${
+        active
+          ? "bg-emerald-900/90 text-white shadow-sm"
+          : "bg-white/70 text-slate-500 hover:bg-white hover:text-slate-900"
+      }`}
+      data-atlas-kind="layer-toggle"
+      data-atlas-layer={label}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
 function LodStrip({
   active,
   zoom,
@@ -596,22 +725,26 @@ function LodStrip({
   zoom: number;
   onZoomChange: (zoom: number) => void;
 }) {
-  const pct = ((zoom + 1.5) / 11) * 100;
+  const displayZoom = atlasZoomToDisplayZoom(zoom);
+  const zoomMin = ATLAS_VISUAL_CONFIG.zoom.displayMin;
+  const zoomMax = ATLAS_VISUAL_CONFIG.zoom.displayMax;
+  const pct = ((displayZoom - zoomMin) / (zoomMax - zoomMin)) * 100;
   return (
-    <div className="atlas-panel flex h-[96px] items-center gap-3 rounded-lg px-3 sm:h-[126px] sm:gap-7 sm:px-4">
-      <div className="hidden w-[74px] text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:block">
-        LOD Mode
+    <div className="atlas-panel flex h-[72px] items-center gap-3 rounded-md px-3 sm:h-[78px] sm:gap-4 sm:px-4">
+      <div className="hidden w-[54px] text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:block">
+        Zoom
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="grid grid-cols-3 gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="grid w-[210px] grid-cols-3 gap-1">
           {(["density", "clusters", "points"] as AtlasLodLayer[]).map((layer) => (
             <button
               key={layer}
               type="button"
-              className={`h-9 rounded-md text-[12px] font-medium capitalize transition sm:h-10 sm:text-[13px] ${
+              aria-pressed={active === layer}
+              className={`h-9 rounded-sm text-[11px] font-medium capitalize transition sm:text-[12px] ${
                 active === layer
                   ? "bg-white text-slate-950 shadow-sm"
-                  : "bg-slate-100/70 text-slate-500"
+                  : "bg-slate-100/80 text-slate-500"
               }`}
               data-atlas-kind="lod-button"
               data-atlas-lod={layer}
@@ -623,7 +756,7 @@ function LodStrip({
             </button>
           ))}
         </div>
-        <div className="relative h-9">
+        <div className="relative h-9 min-w-0 flex-1">
           <div className="absolute left-0 right-0 top-3 h-1 rounded-full bg-slate-200" />
           <div
             className="absolute left-0 top-3 h-1 rounded-full bg-blue-500"
@@ -632,18 +765,20 @@ function LodStrip({
           <input
             aria-label="Zoom"
             className="absolute inset-x-0 top-0 h-7 w-full cursor-pointer opacity-0"
-            max={9.5}
-            min={-1.5}
-            step={0.05}
+            max={zoomMax}
+            min={zoomMin}
+            step={0.1}
             type="range"
-            value={zoom}
-            onChange={(event) => onZoomChange(Number(event.target.value))}
+            value={displayZoom}
+            onChange={(event) =>
+              onZoomChange(displayZoomToAtlasZoom(Number(event.target.value)))
+            }
           />
           <div
             className="absolute top-0 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-blue-500 bg-white shadow"
             style={{ left: `${Math.min(100, Math.max(0, pct))}%` }}
           />
-          <div className="absolute top-7 flex w-full justify-between text-[10px] text-slate-500 sm:text-[11px]">
+          <div className="absolute top-7 flex w-full justify-between text-[10px] text-slate-500">
             {[-10, -4, 0, 5, 10].map((tick) => (
               <span key={tick}>{tick > 0 ? `+${tick}` : tick}</span>
             ))}

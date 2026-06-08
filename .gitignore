@@ -7,6 +7,11 @@ coverage/
 # Build outputs
 out/
 dist/
+packages/*/dist/
+examples/atlas-consumer/.semantic-atlas-package/
+examples/atlas-consumer/dist/
+examples/atlas-consumer/node_modules/
+examples/atlas-consumer/package-lock*.json
 
 # Environment and secrets
 .env
@@ -39,6 +44,8 @@ pnpm-debug.log*
 # Benchmark artifacts
 benchmarks/results/*
 !benchmarks/results/.gitkeep
+outputs/
+packages/atlas-benchmarks/src/results/
 
 # OS and editor files
 .DS_Store
