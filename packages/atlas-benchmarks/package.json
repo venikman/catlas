@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/run-benchmarks.js dist/run-clickable-audit.js",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "quick": "tsx src/run-benchmarks.ts --profile quick",
     "clickable": "tsx src/run-clickable-audit.ts"

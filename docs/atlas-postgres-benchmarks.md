@@ -98,7 +98,7 @@ npm run atlas:analyze-queries
 The script reads:
 
 ```text
-benchmarks/sql/explain-atlas-queries.sql
+packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql
 ```
 
 Edit the `\set` values in that SQL file for the viewport, search term, or entity id under investigation.
