@@ -29,7 +29,7 @@ Changing any of these is a contract change → bump the version, notify all owne
 
 ### Claude Code
 - **Modular boundary (D2/D3):** extract `db.ts`'s 7 functions behind `AtlasStore`; ship `PostgresAtlasStore` + `DemoAtlasStore` + a recommended `createAtlasRoutes({ store })`; routes call a store, not `db.ts` directly.
-- **Field boundary (`sec-1`):** add `lightweightEntity()` projection so the store decides exposed fields; document the entity route is anonymous + cacheable (set TTL/field set per D1).
+- **Field boundary (`sec-1`):** add a serving-layer `lightweightEntity()` projection (mirrors `lightweightPoint`/`lightweightCluster`; **not** an `AtlasStore` method) that trims the response; document the entity route is anonymous + cacheable (set TTL/field set per D1).
 - **Bounded search (`sec-2`):** cap candidate scan; flag short-query trigram degradation.
 - **Gate trust + teach (`testing-2/3/6`, `bench-*`):** unit-test validators / `summarize()` / `percentiles()` / `findings.ts`; add per-check `rationale/fix/docRef`; label load-bearing vs advisory.
 - **Skills (Wave 2):** author `catlas-*` `SKILL.md` skills once a real M2 mapping exists.

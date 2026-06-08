@@ -50,20 +50,68 @@ golden fixtures so a non-TS pipeline can prove conformance.
 
 Default `[-7, 7]` preserves today's behavior; adopters override for their extent.
 
+**Reference span formula** (pin it so the renderer and the tiler/recipe can't drift). The
+reference renderer (`bboxForViewport`) today hardcodes the default-world case:
+
+```
+spanX = 15 / 1.32^zoom          // base 15 is tuned for the default world width of 14
+spanY = spanX * 0.72            // 0.72 = viewport aspect ratio (height : width), not a world ratio
+bbox  = { center ± spanX/2, center ± spanY/2 }   // rounded to 4 dp
+```
+
+Parameterized by `worldBounds` (what Cursor implements), so any extent fits at low zoom with
+the same ~7% margin:
+
+```
+worldWidth = maxX - minX
+spanX = worldWidth * (15 / 14) / 1.32^zoom
+spanY = spanX * 0.72
+```
+
+The cross-slice agreement is fundamentally the **extent** (`worldBounds`); the tiler and
+validator need only the extent. The formula above is the renderer's reference parameterization
+so its `worldBounds` generalization is unambiguous.
+
 ## 4. Selector contract
 
-`ATLAS_SELECTORS` is the one canonical set; benchmarks, examples, and docs import
+`ATLAS_SELECTORS` is the one canonical registry; benchmarks, examples, and docs import
 it. Cursor's slice makes the renderer DOM emit each exactly once and updates both
-README snippets to use `graph = [data-testid="atlas-canvas"]`.
+README snippets to use `graph = [data-testid="atlas-canvas"]`. It also reconciles the
+other scattered selectors into this registry (or marks them host-app-local): the
+`consumer-root` test-id in `examples/`, and `atlas-root` in `docs/atlas-visual-system.md`.
 
 ## 5. The field boundary (replaces auth)
 
-Because access is upstream (D1), the protection that matters is **which fields the
-store returns**. Today `getEntity` returns `metadata`/`payloadSummary` verbatim
-(`sec-1`). Required (Claude Code, P1): a `lightweightEntity()` projection so the
-adopter's store decides exactly what is exposed, and a documented note that the
-reference entity route is anonymous + cacheable — set TTL / field set accordingly.
-`search` must bound its candidate scan (`sec-2`).
+Because access is upstream (D1), the protection that matters is **which fields cross
+the boundary**. There are two distinct layers — keep them separate:
+
+- **Store layer** — `AtlasStore.getEntity` returns the full `AtlasEntityDetails` the
+  store *chooses* to expose. This is the adopter's first control point: their store
+  reads only the columns they're willing to serve.
+- **Serving layer** — the recommended routes apply a `lightweightEntity()` **projection**
+  before responding, mirroring the existing `lightweightPoint` / `lightweightCluster`
+  shapers in `responseShaping.ts`. This is the allow-list for anonymous + cacheable
+  responses.
+
+> **Why `lightweightEntity` is *not* a method on `AtlasStore`:** projection is a serving
+> concern, not a data-access one. Putting it on the store would force every adopter to
+> implement two near-identical entity reads. The store returns the record; the serving
+> layer trims it. (Claude Code, P1.)
+
+Today `getEntity` is returned verbatim by the reference entity route, which is anonymous
+and CDN-cacheable (`sec-1`) — so P1 adds the `lightweightEntity()` projection and a note to
+set the entity TTL / field set accordingly. `search` must bound its candidate scan (`sec-2`).
+
+## 6. Stability
+
+`ATLAS_CONTRACT_VERSION` follows semver intent:
+
+- **Non-breaking (minor/patch):** adding an *optional* field to a shape; adding a new
+  export; widening an input.
+- **Breaking (major bump):** removing/renaming/retyping a field; changing an `AtlasStore`
+  method signature; changing an `ATLAS_SELECTORS` value or the `AtlasWorldBounds` semantics.
+- The reference `/api/atlas/*` route shapes are **illustrative, not contractual** — adopters
+  own their transport (D3). The contract surface is the types + `AtlasStore` + selectors.
 
 ---
 

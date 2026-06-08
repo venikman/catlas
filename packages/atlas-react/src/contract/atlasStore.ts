@@ -66,7 +66,12 @@ export interface AtlasStore {
   listPoints(input: AtlasViewportQuery): Promise<AtlasPoint[]>;
   listClusters(input: AtlasViewportQuery): Promise<AtlasCluster[]>;
   listDensityTiles(input: AtlasViewportQuery): Promise<AtlasDensityTile[]>;
-  /** Returns the full entity record. The adopter controls which fields are exposed here. */
+  /**
+   * Returns the full entity record the store chooses to expose. Field projection for
+   * anonymous/cacheable responses is a SERVING-layer concern (`lightweightEntity()`,
+   * mirroring `lightweightPoint`/`lightweightCluster`) — intentionally NOT a store
+   * method, so adopters don't implement two near-identical entity reads. See CONTRACT.md §5.
+   */
   getEntity(entityId: string): Promise<AtlasEntityDetails | null>;
   search(input: AtlasSearchQuery): Promise<AtlasSearchResult[]>;
 }
