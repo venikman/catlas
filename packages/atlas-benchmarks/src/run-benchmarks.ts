@@ -14,6 +14,7 @@ import type {
   CheckResult,
   ValidatorResult,
 } from "./types";
+import { appRoot, monorepoRoot } from "./monorepoPaths.js";
 import { VALIDATORS } from "./validators";
 import { fail, isServerReachable } from "./validators/helpers";
 
@@ -77,14 +78,19 @@ async function startServerIfNeeded(baseUrl: string): Promise<ChildProcess | null
   if (await isServerReachable(baseUrl)) return null;
 
   const command = process.platform === "win32" ? "npm.cmd" : "npm";
-  const child = spawn(command, ["run", serverScript(), "--", "--port", localPort(baseUrl)], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      ATLAS_DEMO_MODE: process.env.ATLAS_DEMO_MODE ?? "true",
+  const workspaceFlag = serverScript() === "dev" ? "dev" : "start";
+  const child = spawn(
+    command,
+    ["run", workspaceFlag, "-w", "@catlas/semantic-atlas", "--", "--port", localPort(baseUrl)],
+    {
+      cwd: monorepoRoot(),
+      env: {
+        ...process.env,
+        ATLAS_DEMO_MODE: process.env.ATLAS_DEMO_MODE ?? "true",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
     },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  );
 
   const logs: string[] = [];
   child.stdout?.on("data", (data) => logs.push(String(data)));

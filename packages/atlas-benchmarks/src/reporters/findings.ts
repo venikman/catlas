@@ -59,7 +59,7 @@ export function createReportFindings(
   }
   if (hasId(results, "renderer-point-elements")) {
     recommendedActions.push(
-      "Keep SVG point rendering under strict viewport caps, or move to a non-React point renderer before raising point limits.",
+      "Keep Canvas 2D point rendering under strict viewport caps, or move to a tiled/binary renderer before raising point limits.",
     );
   }
   if (

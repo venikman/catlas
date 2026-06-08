@@ -1,19 +1,14 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";
+import { readAppSource, readAtlasReactSource } from "../monorepoPaths.js";
 import { hasPackage, pass, skip, warn } from "./helpers";
-
-function source(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
-}
 
 export async function memoryValidator(
   _context: BenchmarkContext,
 ): Promise<ValidatorResult> {
   const results: CheckResult[] = [];
-  const canvasSource = source("components/atlas/AtlasCanvas.tsx");
-  const viewerSource = source("components/atlas/AtlasViewer.tsx");
-  const bufferSource = source("lib/atlas/rendering/buffers.ts");
+  const canvasSource = readAtlasReactSource("components/atlas/AtlasCanvas.tsx");
+  const viewerSource = readAppSource("components/atlas/AtlasViewer.tsx");
+  const bufferSource = readAtlasReactSource("lib/atlas/rendering/buffers.ts");
 
   const animationCleansUp =
     /requestAnimationFrame/.test(canvasSource) &&

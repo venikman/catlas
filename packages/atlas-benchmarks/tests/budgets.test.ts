@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ATLAS_BUDGETS, BUDGETS } from "../../benchmarks/budgets";
+import { ATLAS_BUDGETS, BUDGETS } from "../src/budgets";
 
 describe("benchmark budgets", () => {
   it("encodes the Semantic Atlas SOTA scorecard tiers", () => {

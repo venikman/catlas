@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ATLAS_LOD_CONFIG, getLodForZoom } from "../../lib/atlas/lod";
-import { ATLAS_RUNTIME_CONFIG } from "../../lib/atlas/runtimeConfig";
+import { ATLAS_LOD_CONFIG, getLodForZoom } from "@catlas/atlas-react/lod";
+import { ATLAS_RUNTIME_CONFIG } from "../atlas/runtimeConfig.js";
 import { BUDGETS } from "../budgets";
 import { computeBbox, scenarioUrl } from "../scenarios";
 import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";

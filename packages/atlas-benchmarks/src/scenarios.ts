@@ -1,4 +1,4 @@
-import type { AtlasBbox } from "../lib/atlas/types";
+import type { AtlasBbox } from "@catlas/atlas-react/types";
 
 // Scenario bboxes are produced with the SAME formula AtlasViewer uses
 // (computeBbox), so they land on real data in the demo/synthetic dataset.
