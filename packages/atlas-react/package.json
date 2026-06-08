@@ -1,0 +1,52 @@
+{
+  "name": "@catlas/atlas-react",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Reusable React renderer for the Catlas semantic atlas map.",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/components/atlas/index.d.ts",
+      "import": "./dist/components/atlas/index.js"
+    },
+    "./lod": {
+      "types": "./dist/lib/atlas/lod.d.ts",
+      "import": "./dist/lib/atlas/lod.js"
+    },
+    "./math": {
+      "types": "./dist/lib/atlas/math.d.ts",
+      "import": "./dist/lib/atlas/math.js"
+    },
+    "./types": {
+      "types": "./dist/lib/atlas/types.d.ts",
+      "import": "./dist/lib/atlas/types.js"
+    },
+    "./visualConfig": {
+      "types": "./dist/lib/atlas/visualConfig.d.ts",
+      "import": "./dist/lib/atlas/visualConfig.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsx scripts/fix-dist-esm-imports.ts dist",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18.3.0 || >=19.0.0",
+    "react-dom": ">=18.3.0 || >=19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "jsdom": "^27.3.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}

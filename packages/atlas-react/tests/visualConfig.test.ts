@@ -3,7 +3,9 @@ import { ATLAS_LOD_CONFIG } from "@/lib/atlas/lod";
 import type { AtlasCluster } from "@/lib/atlas/types";
 import {
   ATLAS_VISUAL_CONFIG,
+  atlasZoomToDisplayZoom,
   clampAtlasZoom,
+  displayZoomToAtlasZoom,
   getLodBlend,
   getPointVisualStyle,
   selectClusterLabels,
@@ -41,6 +43,27 @@ describe("atlas visual config", () => {
     );
     expect(clampAtlasZoom(99)).toBe(ATLAS_VISUAL_CONFIG.zoom.max);
     expect(clampAtlasZoom(-99)).toBe(ATLAS_VISUAL_CONFIG.zoom.min);
+    expect(ATLAS_VISUAL_CONFIG.zoom.max).toBeGreaterThan(
+      ATLAS_VISUAL_CONFIG.zoom.flyToZoom,
+    );
+    expect(ATLAS_VISUAL_CONFIG.zoom.max).toBeLessThanOrEqual(
+      ATLAS_VISUAL_CONFIG.zoom.flyToZoom + 0.45,
+    );
+  });
+
+  it("keeps the visible zoom ticks separate from internal camera zoom", () => {
+    expect(atlasZoomToDisplayZoom(ATLAS_VISUAL_CONFIG.zoom.min)).toBe(
+      ATLAS_VISUAL_CONFIG.zoom.displayMin,
+    );
+    expect(atlasZoomToDisplayZoom(ATLAS_VISUAL_CONFIG.zoom.max)).toBe(
+      ATLAS_VISUAL_CONFIG.zoom.displayMax,
+    );
+    expect(displayZoomToAtlasZoom(ATLAS_VISUAL_CONFIG.zoom.displayMin)).toBe(
+      ATLAS_VISUAL_CONFIG.zoom.min,
+    );
+    expect(displayZoomToAtlasZoom(ATLAS_VISUAL_CONFIG.zoom.displayMax)).toBe(
+      ATLAS_VISUAL_CONFIG.zoom.max,
+    );
   });
 
   it("crossfades density, clusters, and points around configured thresholds", () => {

@@ -5,7 +5,9 @@ import type { AtlasCluster, AtlasLodLayer } from "./types";
 export const ATLAS_VISUAL_CONFIG = {
   zoom: {
     min: -1.5,
-    max: 9.5,
+    max: 7.4,
+    displayMin: -10,
+    displayMax: 10,
     densityMax: ATLAS_LOD_CONFIG.densityMaxZoom,
     pointsMin: ATLAS_LOD_CONFIG.pointsMinZoom,
     wheelSensitivity: 0.004,
@@ -23,68 +25,76 @@ export const ATLAS_VISUAL_CONFIG = {
     coreMinPx: 14,
     coreMaxPx: 40,
     haloScale: 2.8,
-    coreAlphaMin: 0.003,
-    coreAlphaMax: 0.008,
-    haloAlphaMin: 0.0015,
-    haloAlphaMax: 0.004,
+    coreAlphaMin: 0.00035,
+    coreAlphaMax: 0.0012,
+    haloAlphaMin: 0.0001,
+    haloAlphaMax: 0.00055,
   },
   regions: {
     maxCount: 9,
     minRadiusPx: 72,
     maxRadiusPx: 210,
     spreadScale: 1.72,
-    fillAlpha: 0.01,
-    strokeAlpha: 0.16,
-    outerStrokeAlpha: 0.07,
+    fillAlpha: 0.00045,
+    strokeAlpha: 0.012,
+    outerStrokeAlpha: 0.005,
   },
   contours: {
-    ringCount: 4,
+    ringCount: 3,
     baseRadiusScale: 0.58,
     ringSpacing: 0.27,
     minRadius: 0.42,
     maxRadius: 1.58,
-    alphaByRing: [0.23, 0.15, 0.095, 0.058],
-    widthByRing: [1.25, 0.88, 0.66, 0.5],
+    alphaByRing: [0.028, 0.018, 0.01],
+    widthByRing: [0.62, 0.46, 0.32],
+  },
+  branches: {
+    maxCount: 90,
+    maxPerCluster: 7,
+    minImportance: 0.28,
+    curveScale: 0.11,
+    alpha: 0.13,
+    widthPx: 0.55,
   },
   clusters: {
-    bubbleMinPx: 28,
-    bubbleMaxPx: 104,
-    radiusScale: 0.31,
-    fillAlpha: 0.09,
-    strokeAlpha: 0.28,
-    hoverFillAlpha: 0.17,
-    hoverStrokeAlpha: 0.56,
-    haloAlpha: 0.055,
-    centerAlpha: 0.68,
+    bubbleMinPx: 5,
+    bubbleMaxPx: 17,
+    radiusScale: 0.055,
+    fillAlpha: 0.012,
+    strokeAlpha: 0.045,
+    hoverFillAlpha: 0.048,
+    hoverStrokeAlpha: 0.22,
+    haloAlpha: 0.014,
+    centerAlpha: 0.32,
     representativeOpacity: 0.28,
   },
   points: {
-    clusterRadiusMinPx: 0.85,
-    clusterRadiusMaxPx: 2.15,
-    highRadiusMinPx: 1.65,
-    highRadiusMaxPx: 4.15,
-    densityRadiusMinPx: 1.1,
-    densityRadiusMaxPx: 2.2,
-    clusterOpacity: 0.24,
-    densityOpacity: 0.16,
-    highOpacity: 0.72,
-    hoverScale: 1.48,
-    selectedScale: 1.86,
-    selectedStrokePx: 2.4,
-    hoverStrokePx: 1.4,
+    clusterRadiusMinPx: 0.45,
+    clusterRadiusMaxPx: 1.18,
+    highRadiusMinPx: 0.78,
+    highRadiusMaxPx: 1.85,
+    densityRadiusMinPx: 0.36,
+    densityRadiusMaxPx: 0.88,
+    clusterOpacity: 0.64,
+    densityOpacity: 0.28,
+    highOpacity: 0.84,
+    hoverScale: 2.2,
+    selectedScale: 2.65,
+    selectedStrokePx: 1.5,
+    hoverStrokePx: 1,
   },
   labels: {
     density: {
-      maxCount: 6,
-      collisionPx: 170,
+      maxCount: 9,
+      collisionPx: 148,
       edgePaddingRatio: 0.08,
       minWeight: 0.18,
-      fontMinPx: 12,
-      fontMaxPx: 16,
+      fontMinPx: 11,
+      fontMaxPx: 13.5,
     },
     clusters: {
-      maxCount: 14,
-      collisionPx: 92,
+      maxCount: 18,
+      collisionPx: 82,
       edgePaddingRatio: 0.045,
       fontMinPx: 12,
       fontMaxPx: 15.5,
@@ -98,10 +108,10 @@ export const ATLAS_VISUAL_CONFIG = {
     },
   },
   palette: {
-    paper: "#f8f6f0",
+    paper: "#f4f4f1",
     ink: "#0f172a",
     mutedInk: "#475569",
-    labelHalo: "rgba(255, 255, 255, 0.92)",
+    labelHalo: "rgba(44, 53, 58, 0.7)",
     selectedStroke: "#0f172a",
     hoverStroke: "#334155",
     fallback: "#64748b",
@@ -163,6 +173,27 @@ export function clampAtlasZoom(zoom: number): number {
   return Number(
     clamp(zoom, ATLAS_VISUAL_CONFIG.zoom.min, ATLAS_VISUAL_CONFIG.zoom.max).toFixed(2),
   );
+}
+
+export function atlasZoomToDisplayZoom(zoom: number): number {
+  const config = ATLAS_VISUAL_CONFIG.zoom;
+  const normalized =
+    (clampAtlasZoom(zoom) - config.min) / (config.max - config.min);
+  return Number(
+    (
+      config.displayMin +
+      normalized * (config.displayMax - config.displayMin)
+    ).toFixed(2),
+  );
+}
+
+export function displayZoomToAtlasZoom(displayZoom: number): number {
+  const config = ATLAS_VISUAL_CONFIG.zoom;
+  const normalized =
+    (clamp(displayZoom, config.displayMin, config.displayMax) -
+      config.displayMin) /
+    (config.displayMax - config.displayMin);
+  return clampAtlasZoom(config.min + normalized * (config.max - config.min));
 }
 
 export function rgbaCssFromHex(hex: string | undefined, alpha: number): string {
