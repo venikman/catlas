@@ -31,6 +31,7 @@ import type {
 } from "@/lib/atlas/types";
 import { AtlasControls } from "./AtlasControls";
 import { AtlasDebugPanel } from "./AtlasDebugPanel";
+import { AtlasLodControls } from "./AtlasLodControls";
 import { AtlasSearch } from "./AtlasSearch";
 import { AtlasSidePanel } from "./AtlasSidePanel";
 
@@ -382,6 +383,16 @@ function AtlasViewerInner() {
           zoom={viewport.zoom}
           onFit={() => setViewport(ATLAS_INITIAL_VIEWPORT)}
           onZoomStep={handleZoomStep}
+        />
+
+        <AtlasLodControls
+          active={lod.layer}
+          onZoomChange={(zoom) =>
+            setViewport((current) => ({
+              ...current,
+              zoom: clampAtlasZoom(zoom),
+            }))
+          }
         />
 
         <div className="status-pill" aria-live="polite">

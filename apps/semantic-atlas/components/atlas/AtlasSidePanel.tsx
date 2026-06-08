@@ -240,6 +240,8 @@ function ViewPanel({
               type="button"
               className={view.slug === selectedView ? "active" : ""}
               aria-pressed={view.slug === selectedView}
+              data-atlas-kind="view-button"
+              data-atlas-view={view.slug}
               onClick={() => onSelectView(view.slug)}
             >
               <span className="lens-preview ontology" aria-hidden="true">
@@ -258,15 +260,18 @@ function ViewPanel({
       </fieldset>
 
       {Object.entries(layers).map(([key, enabled]) => (
-        <label key={key} className="toggle-control">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={() => onLayerToggle(key as keyof LayerToggles)}
-          />
-          <span />
+        <button
+          key={key}
+          type="button"
+          className="toggle-control"
+          aria-pressed={enabled}
+          data-atlas-kind="layer-toggle"
+          data-atlas-layer={key}
+          onClick={() => onLayerToggle(key as keyof LayerToggles)}
+        >
+          <span aria-hidden="true" />
           <strong className="capitalize">{key}</strong>
-        </label>
+        </button>
       ))}
     </div>
   );

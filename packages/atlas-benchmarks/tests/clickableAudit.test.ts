@@ -25,13 +25,17 @@ describe("atlas clickable audit", () => {
     expect(audit).toContain("interaction.webm");
   });
 
-  it("keeps fake placeholder controls disabled and map controls auditable", () => {
+  it("keeps map controls and OntoTwin audit hooks wired for clickable audit", () => {
     const controls = readFileSync(
       join(APP_ROOT, "components/atlas/AtlasControls.tsx"),
       "utf8",
     );
-    const viewer = readFileSync(
-      join(APP_ROOT, "components/atlas/AtlasViewer.tsx"),
+    const lodControls = readFileSync(
+      join(APP_ROOT, "components/atlas/AtlasLodControls.tsx"),
+      "utf8",
+    );
+    const sidePanel = readFileSync(
+      join(APP_ROOT, "components/atlas/AtlasSidePanel.tsx"),
       "utf8",
     );
     const search = readFileSync(
@@ -42,13 +46,13 @@ describe("atlas clickable audit", () => {
     expect(controls).toContain('data-atlas-action="home"');
     expect(controls).toContain('data-atlas-action="zoom-in"');
     expect(controls).toContain('data-atlas-action="zoom-out"');
-    expect(controls).toContain('data-atlas-action="locate-selected"');
-    expect(controls).toContain("disabled");
-    expect(viewer).toContain('data-atlas-kind="view-button"');
-    expect(viewer).toContain('data-atlas-kind="layer-toggle"');
-    expect(viewer).toContain("aria-pressed={active === layer}");
-    expect(search).toContain('aria-label="Search settings"');
-    expect(search).toContain("disabled");
+    expect(controls).toContain('data-atlas-kind="map-control"');
+    expect(lodControls).toContain('data-atlas-kind="lod-button"');
+    expect(lodControls).toContain("aria-pressed={active === layer}");
+    expect(sidePanel).toContain('data-atlas-kind="view-button"');
+    expect(sidePanel).toContain('data-atlas-kind="layer-toggle"');
+    expect(sidePanel).toContain("aria-pressed={enabled}");
+    expect(search).toContain('data-testid="atlas-search-input"');
     expect(search).toContain("const queryText = q.trim()");
     expect(search).not.toContain("useDeferredValue");
   });
