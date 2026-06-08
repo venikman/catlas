@@ -40,12 +40,31 @@ In scope for this plan:
 | Level | Name | Promise | Required evidence |
 | --- | --- | --- | --- |
 | M0 | Demo baseline | Synthetic data demonstrates the concept. | Local app runs, demo-mode benchmarks pass or report explicit skips. |
-| M1 | Package adoption | Another React app can render shaped atlas data without importing app code. | `npm run build:packages`, `npm run example:atlas-consumer:build`, `npm run example:atlas-consumer:preview`, then `npm run bench:ui -- --url=http://127.0.0.1:4173 --root-selector='[data-testid="consumer-root"]' --graph-selector='[data-testid="semantic-atlas-map"]' --overlay-selector='[data-atlas-kind="density-label"]' --interaction=wheel-pan --gate`. |
+| M1 | Package adoption | Another React app can render shaped atlas data without importing app code. | Build packages, run the consumer fixture, then pass the Tier A UI evaluator gate. The exact clean-checkout command sequence belongs in `docs/adoption/quickstart.md`. |
 | M1.5 | Data-shape feasibility | A team can test whether product data makes sense as an atlas before investing in Postgres prep. | About 100 product rows mapped into a local JSON fixture, rendered through the consumer example or equivalent host, plus a screenshot or evaluator artifact. |
 | M2 | Real-data local adapter | A product can map its own source records into atlas views, points, clusters, density, and entity payloads. | Data-prep runbook, schema mapping, local seed or read-only staging data, `EXPLAIN ANALYZE` samples for database-backed paths, bounded API responses. |
 | M3 | Product-styled integration | Product teams can style data colors and host chrome around the atlas without forking renderer internals. | Data `colorKey` mapping, host `className`/`style` or shell-token examples, selector registry, visual audit screenshots or evaluator artifacts. |
-| M4 | Benchmark-gated adoption | Integrations can run the right benchmark tier before merging. | Tier A portable `@catlas/ui-graph-evaluator` gate for any canvas/SVG host; Tier B reference-shell `atlas-clickable-audit` only when the adopter implements semantic-atlas chrome; repeatable commands, report paths, pass/warn/fail/skip policy, sample CI workflow. |
+| M4 | Benchmark-validated integration | Integrations can run the right benchmark tier before merging, with CI gating optional. | Tier A portable `@catlas/ui-graph-evaluator` gate for any canvas/SVG host; `@catlas/atlas-benchmarks` quick or standard profile for adopters implementing atlas API/LOD contracts; Tier B `atlas-clickable-audit` only when the adopter implements semantic-atlas chrome. Evidence includes repeatable commands, report paths, pass/warn/fail/skip policy, sample CI workflow, and benchmark interpretation guidance. |
 | M5 | Production readiness | Product owners understand operational work needed before depending on the atlas at scale. | `docs/atlas-production.md` checklist, cache/index plan, privacy review, refresh strategy, scale budget review. |
+
+The M1 quickstart must include this clean-checkout command sequence:
+
+```bash
+npm run build:packages
+npm run example:atlas-consumer:build
+
+# Terminal 1
+npm run example:atlas-consumer:preview
+
+# Terminal 2
+npm run bench:ui -- \
+  --url=http://127.0.0.1:4173 \
+  --root-selector='[data-testid="consumer-root"]' \
+  --graph-selector='[data-testid="semantic-atlas-map"]' \
+  --overlay-selector='[data-atlas-kind="density-label"]' \
+  --interaction=wheel-pan \
+  --gate
+```
 
 ## Contract Stability
 
@@ -80,6 +99,7 @@ Create the following adopter-facing docs. Each doc should include copyable comma
 | Postgres data preparation | Step-by-step path from existing product tables to atlas tables and bounded endpoints. | `docs/adoption/postgres-data-prep.md` |
 | Styling and theming | How products apply data colors, host-shell tokens, container sizing, and benchmark selectors without editing renderer internals. | `docs/adoption/styling-and-theming.md` |
 | Benchmark gates | How to run Tier A portable UI evaluator, Tier B reference-shell audits, atlas benchmarks, live DB checks, and sample CI. | `docs/adoption/benchmark-gates.md` |
+| Benchmark interpretation | How to read PASS, WARN, FAIL, SKIP, recommended next actions, reference scores, and when `--gate` is appropriate. | `docs/adoption/benchmark-interpretation.md` |
 | Evidence template | What to attach to PRs before claiming adoption maturity. | `docs/adoption/evidence-template.md` |
 | Agent playbooks | Guided `.cursor/skills/catlas-*` skill specs and human checklists for developers using agentic coding tools. | `docs/adoption/agent-playbooks.md` |
 | Maturity scorecard | M0-M5 status sheet, including the optional M1.5 feasibility checkpoint, for each adopter product. | `docs/adoption/maturity-scorecard.md` |
@@ -114,7 +134,7 @@ Product teams with an existing Postgres database should follow this route before
 4. **Shape lightweight point rows.** Keep point payloads small: ids, labels, coordinates, importance, color/group fields, and small search hints. Keep heavy metadata behind entity lookup.
 5. **Precompute clusters and density.** Low and medium zoom must use aggregate tables. Do not rely on raw point scans for low-zoom navigation.
 6. **Apply indexes.** Keep bbox, entity, cluster, density, and search indexes in place. Optional PostGIS can improve spatial work, but the numeric bbox path remains the baseline.
-7. **Implement bounded endpoints.** Mirror the reference route behavior: bbox validation, LOD checks, row caps, lightweight payloads, and stable error shapes.
+7. **Implement bounded endpoints.** Import `ATLAS_LOD_CONFIG` and `getLodForZoom` from `@catlas/atlas-react/lod` or mirror the same thresholds: density below zoom 3, clusters from zoom 3 through 6, and points at zoom 6.01 and above. Enforce bbox validation, LOD checks, row caps, lightweight payloads, and stable error shapes.
 8. **Run query evidence.** Capture representative `EXPLAIN ANALYZE` for views, density, clusters, high-zoom points, entity lookup, and search.
 9. **Run local DB validation.** Configure `DATABASE_URL` against a local seed database, disposable container, or read-only staging replica, never active production. Run the live DB validator and capture query-plan evidence. UI and clickable audits are M4 evidence; at M2 they are optional smoke checks only.
 10. **Record residual risks.** Note skipped checks, production-only concerns, auth gaps, privacy constraints, and scale assumptions.
@@ -125,10 +145,13 @@ Styling should remain product-owned. M3 is scoped to product data colors, host c
 
 OntoTwin Atlas tokens and kit CSS are the reference-app shell, not a required adopter dependency. Link `docs/atlas-visual-system.md` for the reference visual target and keep product tokens in the host app unless a reusable theme API is added later.
 
+`ATLAS_VISUAL_CONFIG`, exported from `@catlas/atlas-react/visualConfig`, is the current renderer styling boundary. Product colors flow through `colorKey` fields on points, clusters, and density payloads. The renderer palette, paper, ink, halos, selection, hover, label counts, collision behavior, point sizing, and cluster sizing currently live in `ATLAS_VISUAL_CONFIG`; changing those without forking requires a future config override API. The M3 styling guide should make that boundary explicit.
+
 Recommended guidance:
 
 - Set explicit parent dimensions. The renderer needs a stable container height and width.
 - Map product categories to point and cluster color fields before passing data to the component.
+- Require `colorKey` on every `AtlasCluster`; set `AtlasPoint.colorKey` only when a point needs to override cluster or fallback coloring.
 - Keep density, point, cluster, label, and selected states visually distinct.
 - Use product design tokens in the host shell and pass renderer data colors through shaped records.
 - Keep search, inspector, side panels, and navigation chrome outside `@catlas/atlas-react` unless they are promoted into a reusable package later.
@@ -160,7 +183,7 @@ Agentic assistance should produce repeatable work, not unreviewed transformation
 | `catlas-styling-adapter` | Hybrid | Align atlas data colors and host chrome with product design tokens. | Token docs, screenshots, component paths. | Styling plan and benchmark selectors. |
 | `catlas-evidence-reviewer` | Human-first | Review an adoption PR for maturity claims. | PR diff, benchmark reports, screenshots. | Accepted findings, rejected findings, residual risks. |
 
-Each skill must define preconditions, allowed paths, prohibited actions, stop conditions, and validation commands. Common prohibited actions: never commit `.env`, generated production data, database dumps, or credentials; never run destructive SQL such as `DROP TABLE`; never claim M2 or higher without source-data evidence.
+Each skill must define YAML frontmatter, preconditions, path globs for allowed edits, prohibited actions, stop conditions, and copy-paste validation commands. Common prohibited actions: never commit `.env`, generated production data, database dumps, or credentials; never run destructive SQL such as `DROP TABLE`; never claim M2 or higher without source-data evidence.
 
 Worked example for `catlas-benchmark-gate`:
 
@@ -170,6 +193,16 @@ Stop condition: stop after 3 route scans if no graph selector can be found.
 Allowed edits: package scripts, docs, CI example files, and benchmark selector config.
 Validation: run Tier A `ui-graph-evaluator` first; run Tier B clickable audit only for semantic-atlas-compatible shell chrome.
 Output: commands, report paths, pass/warn/fail interpretation, and maturity level supported by evidence.
+```
+
+Worked example for `catlas-adoption-scout`:
+
+```text
+Preconditions: repo path is known and dependencies can be inspected read-only.
+Stop condition: stop if no React app, graph surface, or route candidate is found after 3 route scans.
+Allowed edits: none during scout mode.
+Validation: report package manager, app routes, likely graph selectors, styling system, data source, and recommended first maturity target.
+Output: adoption-readiness summary plus next skill to run.
 ```
 
 ## Proposed Tools
@@ -212,7 +245,8 @@ Done when:
 
 - Add `docs/adoption/index.md` as the primary adoption entry point with a decision tree, M0-M5 checklist including M1.5, and "read only when needed" section.
 - Ship `.cursor/skills/catlas-adoption-scout/SKILL.md` and `.cursor/skills/catlas-benchmark-gate/SKILL.md`.
-- Keep the minimum reader path to the index, Adoption quickstart, `examples/atlas-consumer`, and the Tier A `ui-graph-evaluator --gate` command.
+- Stub Adoption quickstart with the M1 command sequence before the full Phase 1 docs expand.
+- Keep the minimum reader path to the index, quickstart stub, `examples/atlas-consumer`, and the Tier A `ui-graph-evaluator --gate` command.
 - Include a migration path for informal adopters: run `npx ui-graph-evaluator --gate` or the workspace `bench:ui` equivalent against the current app to establish a baseline, then use the maturity scorecard to identify gaps.
 - Include rollback guidance: if M2 fails, treat it as a data-shape or bounded-endpoint issue, fall back to M1/M1.5 evidence, and revisit source-schema mapping before changing renderer internals.
 
@@ -222,14 +256,15 @@ Done when:
 
 ### Phase 1: Documentation spine
 
-- Add `docs/adoption/` index, Adoption quickstart, Data contract, Postgres data preparation, Styling and theming, Benchmark gates, Evidence template, Agent playbooks, and Maturity scorecard.
+- Add `docs/adoption/` index, Adoption quickstart, Data contract, Postgres data preparation, Styling and theming, Benchmark gates, Benchmark interpretation, Evidence template, Agent playbooks, and Maturity scorecard.
 - Link the adoption docs from the root README and package READMEs.
 - Reconcile existing query-plan path references against `packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql`.
 - Add a canonical backend-doc map so adoption docs extend `packages/atlas-react/docs/backend-integration.md` and do not duplicate it.
-- Add a benchmark-to-maturity map: M1 graph-present checks, M2 bounded API/DB checks, M3 visual artifacts, and M4 full gate pass. Reports should group or label checks by the minimum maturity level they support.
+- Add a benchmark-to-maturity map: M1 graph-present checks, M1.5 fixture-render checks, M2 bounded API/DB checks, M3 visual artifacts, and M4 full gate pass. Reports should group or label checks by the minimum maturity level they support.
 - Document current default report paths per tool: atlas benchmarks write `outputs/atlas-benchmarks/latest.json` and `outputs/atlas-benchmarks/latest.md`; clickable audit writes `outputs/atlas-benchmarks/clickable-audit-latest.json` and optional artifacts under `outputs/atlas-benchmarks/clickable-audit-artifacts`; UI evaluator writes `benchmarks/results/ui-evaluator-latest.json` and optional artifacts under `benchmarks/results/ui-evaluator-artifacts`. Reconcile stale docs that still mention older `benchmarks/results/latest.*` or `outputs/ui-evaluator/` paths unless the runner defaults are intentionally changed.
 - Document reference-score interpretation: scores above 70 indicate strong visual-texture fidelity, 50-70 is acceptable for early integration, and below 50 means adopters should review density data, canvas rendering, or their chosen baseline before setting `--min-reference-score`.
-- Define the minimum adopter evidence required for M1, M2, M3, and M4.
+- Define the minimum adopter evidence required for M1, M1.5, M2, M3, and M4.
+- Move runbook-heavy prose into child docs as Phase 1 lands; keep this plan as the routing artifact and target roughly 150 lines after extraction.
 
 Done when:
 
@@ -278,24 +313,34 @@ Done when:
 
 Every adoption PR should include:
 
-- Product/app route and local URL used for validation.
-- Package and app commands run.
-- Benchmark tier, commands run, and report paths.
-- `DATABASE_URL` status: configured, skipped, or intentionally absent.
-- Query-plan evidence for real-data paths, when M2 or higher is claimed.
-- Screenshots or evaluator artifacts for styling changes, when M3 or higher is claimed.
-- Known skips, warnings, and residual risks.
-- Explicit claim scope: demo baseline, local package adoption, data-shape feasibility, real-data local adapter, product-styled integration, benchmark-gated adoption, or production readiness.
+- [ ] **[M0+]** Product/app route and local URL used for validation.
+- [ ] **[M0+]** Package and app commands run.
+- [ ] **[M0+]** Benchmark tier, commands run, and report paths.
+- [ ] **[M0+]** Known skips, warnings, and residual risks.
+- [ ] **[M0+]** Explicit claim scope: demo baseline, local package adoption, data-shape feasibility, real-data local adapter, product-styled integration, benchmark-validated integration, or production readiness.
+- [ ] **[M2+]** `DATABASE_URL` status: configured against local/staging, skipped, or intentionally absent. Never point adoption benchmarks at active production.
+- [ ] **[M2+]** Query-plan evidence for real-data paths, including representative `EXPLAIN ANALYZE` samples.
+- [ ] **[M3+]** Screenshots or evaluator artifacts for styling changes.
 
 ## Review Policy
 
-Adoption claims should be reviewed using the FPF distinctions:
+Adoption claims should be reviewed using the First Principles Framework claim-validation distinctions:
 
 - **Promise:** What the docs or PR says other products can rely on.
 - **Ability:** What the code and examples are capable of today.
 - **Performance:** What benchmark reports, query plans, screenshots, and runtime checks prove.
 
 Reject claims that skip from ability to promise without measured evidence.
+
+Overclaim example: a PR says "M4 benchmark-validated integration complete" but only ran `bench:atlas:quick` without `--gate` and attached no report. The ability exists because benchmarks are configured, but no measured performance evidence supports the M4 promise.
+
+## Success Criteria
+
+- M1 time-to-first-render: a clean React adopter can reach a visible atlas render and Tier A UI evaluator report in 1800 s or less after dependencies install.
+- M1.5 feasibility: a pilot can map about 100 product rows into a local fixture and decide whether the atlas shape is plausible before starting database work.
+- M2 data prep: a pilot can produce bounded API responses and representative query-plan evidence without using active production data.
+- M4 education: benchmark reports drive at least one concrete fix or documented accepted warning, not just a pass/fail badge.
+- Adoption scale: a second adopter reaches M1 or M1.5 without direct maintainer hand-holding after the Phase 0.5 kit exists.
 
 ## Open Questions
 
@@ -304,3 +349,5 @@ Reject claims that skip from ability to promise without measured evidence.
 - Should `catlas-adoption-doctor` be part of `@catlas/atlas-benchmarks` or a separate package?
 - What is the first external data size target beyond the current local benchmark scale?
 - Which exported type fields need an immediate contract-stability changelog before broader adopter work begins?
+- What should an adopter do when source data cannot be mapped into stable `x`/`y` coordinates or aggregate clusters?
+- Who approves promotion between maturity levels: self-assessment, peer review, or the future `catlas-evidence-reviewer` playbook?
