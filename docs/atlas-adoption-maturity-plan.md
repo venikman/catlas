@@ -88,7 +88,7 @@ Product teams with an existing Postgres database should follow this route before
 6. **Apply indexes.** Keep bbox, entity, cluster, density, and search indexes in place. Optional PostGIS can improve spatial work, but the numeric bbox path remains the baseline.
 7. **Implement bounded endpoints.** Mirror the reference route behavior: bbox validation, LOD checks, row caps, lightweight payloads, and stable error shapes.
 8. **Run query evidence.** Capture representative `EXPLAIN ANALYZE` for views, density, clusters, high-zoom points, entity lookup, and search.
-9. **Run benchmark gates.** Configure `DATABASE_URL`, run the live DB validator, then run UI and clickable audits against the adopter app.
+9. **Run benchmark gates.** Configure `DATABASE_URL` against a local seed database, disposable container, or read-only staging replica, never active production. Run the live DB validator, then run UI and clickable audits against the adopter app.
 10. **Record residual risks.** Note skipped checks, production-only concerns, auth gaps, privacy constraints, and scale assumptions.
 
 ## Styling and Theming Flow
@@ -141,7 +141,7 @@ New tools to consider after docs are in place:
 
 ### Phase 1: Documentation spine
 
-- Add `docs/adoption/` index, quickstart, data contract, Postgres prep, styling guide, benchmark gates, evidence template, agent playbooks, and maturity scorecard.
+- Add `docs/adoption/` index, Adoption quickstart, Data contract, Postgres data preparation, Styling and theming, Benchmark gates, Evidence template, Agent playbooks, and Maturity scorecard.
 - Link the adoption docs from the root README and package READMEs.
 - Reconcile existing query-plan path references against `packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql`.
 - Define the minimum adopter evidence required for M1, M2, M3, and M4.
@@ -179,7 +179,9 @@ Done when:
 
 - Decide whether the proposed tools should live in `@catlas/atlas-benchmarks`, a new package, or scripts under examples.
 - Start with `catlas-adoption-doctor` only if the docs reveal repeated manual checks.
-- Keep database profiling read-only unless a user explicitly opts into generated migrations or transforms.
+- Add `catlas-data-prep-check` when multiple adopters need repeatable transform validation before import.
+- Add `catlas-evidence-pack` when PR reviews repeatedly need bundled benchmark reports, screenshots, query plans, and environment summaries.
+- Keep database profiling through `catlas-postgres-profile` read-only unless a user explicitly opts into generated migrations or transforms.
 
 Done when:
 
