@@ -1,4 +1,4 @@
-import { ATLAS_LOD_CONFIG, getLodForZoom, shouldFetchPoints } from "../../lib/atlas/lod";
+import { ATLAS_LOD_CONFIG, getLodForZoom, shouldFetchPoints } from "@catlas/atlas-react/lod";
 import type { BenchmarkContext, ValidatorResult } from "../types";
 import { computeBbox, scenarioUrl } from "../scenarios";
 import { isServerReachable, pass, skip, tryFetchJson, fail } from "./helpers";

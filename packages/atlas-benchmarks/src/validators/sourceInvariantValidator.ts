@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { ATLAS_LOD_CONFIG } from "../../lib/atlas/lod";
-import { ATLAS_RUNTIME_CONFIG } from "../../lib/atlas/runtimeConfig";
+import { ATLAS_LOD_CONFIG } from "@catlas/atlas-react/lod";
+import { ATLAS_RUNTIME_CONFIG } from "../atlas/runtimeConfig.js";
 import { BUDGETS } from "../budgets";
+import { appRoot, atlasReactSourceRoot } from "../monorepoPaths.js";
 import type { BenchmarkContext, ValidatorResult } from "../types";
 import { fail, pass, readSourceMap, warn } from "./helpers";
 
@@ -14,7 +15,7 @@ type SourceInvariant = {
   ok: boolean;
 };
 
-export function scanSourceInvariants(root = process.cwd()): SourceInvariant[] {
+export function scanSourceInvariants(root = appRoot()): SourceInvariant[] {
   const source = readSourceMap(root, ["app", "components", "lib"]);
   const appApi = Array.from(source.entries()).filter(([file]) =>
     file.startsWith("app/api/atlas/"),
@@ -22,9 +23,15 @@ export function scanSourceInvariants(root = process.cwd()): SourceInvariant[] {
   const clientComponents = Array.from(source.entries()).filter(([file]) =>
     file.startsWith("components/"),
   );
-  const atlasCanvas = source.get("components/atlas/AtlasCanvas.tsx") ?? "";
+  const atlasCanvas =
+    source.get("components/atlas/AtlasCanvas.tsx") ??
+    readSourceMap(atlasReactSourceRoot(), ["components/atlas"]).get(
+      "components/atlas/AtlasCanvas.tsx",
+    ) ??
+    "";
   const fetchApi = source.get("lib/atlas/api.ts") ?? "";
-  const lodConfig = source.get("lib/atlas/lod.ts") ?? "";
+  const lodConfig =
+    readSourceMap(atlasReactSourceRoot(), ["lib/atlas"]).get("lib/atlas/lod.ts") ?? "";
   const responseShaping = source.get("lib/atlas/responseShaping.ts") ?? "";
   const pointsRoute = source.get("app/api/atlas/points/route.ts") ?? "";
 
@@ -41,7 +48,9 @@ export function scanSourceInvariants(root = process.cwd()): SourceInvariant[] {
     !/metadata:\s*point\.metadata/.test(responseShaping) &&
     !/payloadSummary:\s*point\.payloadSummary/.test(responseShaping);
   const runtimeConfigExists = existsSync(join(root, "lib/atlas/runtimeConfig.ts"));
-  const visualConfigExists = existsSync(join(root, "lib/atlas/visualConfig.ts"));
+  const visualConfigExists =
+    existsSync(join(root, "lib/atlas/visualConfig.ts")) ||
+    existsSync(join(atlasReactSourceRoot(), "lib/atlas/visualConfig.ts"));
   const lodConfigCentral =
     /ATLAS_LOD_CONFIG/.test(lodConfig) && /getLodForZoom/.test(lodConfig);
   const searchCapBounded =
@@ -135,7 +144,7 @@ export function scanSourceInvariants(root = process.cwd()): SourceInvariant[] {
     },
     {
       detail: hasPerPointSvgMap
-        ? "Current no-WebGL SVG renderer maps bounded points to SVG circles; acceptable only under strict caps."
+        ? "Renderer maps bounded points to SVG circles; keep strict caps or move them to Canvas 2D."
         : "Main atlas renderer does not map points to React elements.",
       id: "renderer-point-elements",
       label: "Renderer avoids unbounded React point elements",

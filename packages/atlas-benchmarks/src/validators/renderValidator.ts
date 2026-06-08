@@ -123,11 +123,28 @@ async function browserRuntimeChecks(
     const mapSvg = page.locator(
       '[data-testid="atlas-canvas"] svg[aria-label="Semantic atlas map"]',
     );
+    const mapCanvas = page.locator(
+      '[data-testid="atlas-canvas"] canvas[data-testid="atlas-map-canvas"]',
+    );
     await mapSvg.waitFor({ timeout: 5000 });
+    await mapCanvas.waitFor({ timeout: 5000 });
     await page.waitForTimeout(350);
 
     const rootReadyMs = Number((performance.now() - startedAt).toFixed(2));
     const svgBox = await mapSvg.boundingBox();
+    const canvasBox = await mapCanvas.boundingBox();
+    const canvasHasInk = await page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>(
+        '[data-testid="atlas-map-canvas"]',
+      );
+      const context = canvas?.getContext("2d");
+      if (!canvas || !context || canvas.width <= 0 || canvas.height <= 0) return false;
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let index = 3; index < pixels.length; index += 4) {
+        if (pixels[index] > 0) return true;
+      }
+      return false;
+    });
     const pointRequests = atlasRequests.filter((path) => path === "/api/atlas/points");
     const atlasResponseSizes = await Promise.all(atlasResponseSizePromises);
     const initialAtlasPayloadBytes = atlasResponseSizes.reduce(
@@ -250,18 +267,31 @@ async function browserRuntimeChecks(
               unit: "bytes",
             },
           ),
-      svgBox && svgBox.width > 0 && svgBox.height > 0
+      canvasBox && canvasBox.width > 0 && canvasBox.height > 0 && svgBox && svgBox.width > 0 && svgBox.height > 0
         ? pass(
             "render-browser-nonblank-shell",
             "render",
             "Atlas renderer has visible bounds",
-            `SVG bounds were ${Math.round(svgBox.width)}x${Math.round(svgBox.height)} px.`,
+            `Canvas bounds were ${Math.round(canvasBox.width)}x${Math.round(canvasBox.height)} px; SVG overlay bounds were ${Math.round(svgBox.width)}x${Math.round(svgBox.height)} px.`,
           )
         : fail(
             "render-browser-nonblank-shell",
             "render",
             "Atlas renderer has visible bounds",
-            "SVG renderer bounding box was missing or zero-sized.",
+            "Canvas or SVG renderer bounds were missing or zero-sized.",
+          ),
+      canvasHasInk
+        ? pass(
+            "render-canvas-nonblank-texture",
+            "render",
+            "Canvas map texture is nonblank",
+            "Canvas 2D map texture contained nontransparent pixels.",
+          )
+        : fail(
+            "render-canvas-nonblank-texture",
+            "render",
+            "Canvas map texture is nonblank",
+            "Canvas 2D map texture was blank.",
           ),
     ];
   } finally {
@@ -277,29 +307,31 @@ export async function renderValidator(
   const viewerSource = source("components/atlas/AtlasViewer.tsx");
   const noWebglTestSource = source("tests/atlas/noWebglRenderer.test.ts");
 
+  const hasCanvas2DRenderer =
+    /<canvas\b/.test(canvasSource) && /getContext\(\s*["']2d/.test(canvasSource);
   const hasSvgRenderer = /<svg[\s>]/.test(canvasSource);
   const hasStableRootHooks =
     /data-testid="atlas-root"/.test(viewerSource) &&
     /data-testid="atlas-canvas"/.test(canvasSource);
   const noWebglReferences =
-    !/(WEBGL_debug_renderer_info|createContext\(\s*["']webgl|DeckGL|@deck\.gl|<canvas\b)/i.test(
+    !/(WEBGL_debug_renderer_info|createContext\(\s*["']webgl|getContext\(\s*["']webgl|DeckGL|@deck\.gl)/i.test(
       `${canvasSource}\n${viewerSource}`,
     );
   const noWebglRegressionTest = /no-WebGL atlas renderer/.test(noWebglTestSource);
 
   results.push(
-    hasSvgRenderer
+    hasCanvas2DRenderer && hasSvgRenderer
       ? pass(
           "render-svg-initializes",
           "render",
           "Renderer initializes without WebGL",
-          "AtlasCanvas contains the current SVG renderer entry point.",
+          "AtlasCanvas contains a Canvas 2D map texture layer and SVG overlay without WebGL.",
         )
       : warn(
           "render-svg-initializes",
           "render",
           "Renderer initializes without WebGL",
-          "AtlasCanvas did not contain an SVG renderer entry point; update this validator for the active renderer.",
+          "AtlasCanvas did not contain both the Canvas 2D texture layer and SVG overlay; update this validator for the active renderer.",
         ),
   );
 
@@ -309,13 +341,13 @@ export async function renderValidator(
           "render-no-webgl-runtime",
           "render",
           "No WebGL runtime path",
-          "Renderer source does not reference WebGL, canvas, deck.gl, or WEBGL_debug_renderer_info.",
+          "Renderer source does not reference WebGL, deck.gl, or WEBGL_debug_renderer_info.",
         )
       : warn(
           "render-no-webgl-runtime",
           "render",
           "No WebGL runtime path",
-          "Renderer source contains WebGL/canvas/deck.gl references; verify this is intentional.",
+          "Renderer source contains WebGL/deck.gl references; verify this is intentional.",
         ),
   );
 
@@ -325,7 +357,7 @@ export async function renderValidator(
           "render-no-webgl-regression-test",
           "render",
           "No-WebGL regression test exists",
-          "tests/atlas/noWebglRenderer.test.ts guards against reintroducing WebGL/canvas renderer paths.",
+          "tests/atlas/noWebglRenderer.test.ts guards against WebGL/deck.gl while allowing Canvas 2D.",
         )
       : warn(
           "render-no-webgl-regression-test",

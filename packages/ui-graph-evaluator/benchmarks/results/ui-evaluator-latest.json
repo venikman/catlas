@@ -1,0 +1,92 @@
+{
+  "checks": [
+    {
+      "check": "Page loads",
+      "detail": "Loaded \"Semantic Atlas Consumer Fixture\" at http://127.0.0.1:4173/.",
+      "status": "pass"
+    },
+    {
+      "check": "Root selector exists",
+      "detail": "[data-testid=\"consumer-root\"] matched 1 node(s).",
+      "status": "pass"
+    },
+    {
+      "check": "Graph selector exists",
+      "detail": "[data-testid=\"semantic-atlas-map\"] resolved to [data-testid=\"semantic-atlas-map\"] with 1 node(s).",
+      "status": "pass"
+    },
+    {
+      "check": "Graph has visible bounds",
+      "detail": "Graph bounds were 1440x900 px.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph overlay exists",
+      "detail": "[data-atlas-kind=\"density-label\"] matched 5 node(s); threshold=1.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph screenshot texture is nonblank",
+      "detail": "Graph element screenshot had 3130 background-relative mark pixels.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph screenshot texture coverage measured",
+      "detail": "Background-relative coverage was 2.42%; threshold=1.20%.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph screenshot spatial texture measured",
+      "detail": "Marks occupied 305/384 sampled grid cells; threshold=1.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph screenshot color variation measured",
+      "detail": "Detected 3 hue buckets across 269 colored sampled pixels; threshold=3.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph interaction changes view",
+      "detail": "wheel-pan changed the viewport screenshot.",
+      "status": "pass"
+    },
+    {
+      "check": "Graph overlay persists",
+      "detail": "[data-atlas-kind=\"density-label\"] matched 5 node(s) after wheel-pan; before=5 threshold=1.",
+      "status": "pass"
+    },
+    {
+      "check": "Console health",
+      "detail": "No console warnings/errors or page errors.",
+      "status": "pass"
+    }
+  ],
+  "meta": {
+    "artifacts": {},
+    "graphSelector": "[data-testid=\"semantic-atlas-map\"]",
+    "interaction": "wheel-pan",
+    "overlaySelector": "[data-atlas-kind=\"density-label\"]",
+    "panPixels": 180,
+    "resolvedGraphSelector": "[data-testid=\"semantic-atlas-map\"]",
+    "rootSelector": "[data-testid=\"consumer-root\"]",
+    "timestamp": "2026-06-08T17:03:50.314Z",
+    "thresholds": {
+      "minCoverage": 0.012,
+      "minHueBuckets": 3,
+      "minOccupiedCells": 1,
+      "minReferenceScore": 55,
+      "strictReference": false,
+      "strictTexture": false
+    },
+    "url": "http://127.0.0.1:4173",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "summary": {
+    "fail": 0,
+    "pass": 12,
+    "warn": 0
+  }
+}

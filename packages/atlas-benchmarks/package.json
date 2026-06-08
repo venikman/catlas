@@ -1,0 +1,35 @@
+{
+  "name": "@catlas/atlas-benchmarks",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Atlas-specific API, render, LOD, and clickable audit benchmark suite.",
+  "bin": {
+    "atlas-benchmark": "./dist/run-benchmarks.js",
+    "atlas-clickable-audit": "./dist/run-clickable-audit.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/run-benchmarks.d.ts",
+      "import": "./dist/run-benchmarks.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/run-benchmarks.js dist/run-clickable-audit.js",
+    "test": "vitest run",
+    "quick": "tsx src/run-benchmarks.ts --profile quick",
+    "clickable": "tsx src/run-clickable-audit.ts"
+  },
+  "dependencies": {
+    "@catlas/atlas-react": "*",
+    "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}

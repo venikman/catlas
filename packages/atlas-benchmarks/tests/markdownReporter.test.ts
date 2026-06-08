@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createMarkdownReport } from "../../benchmarks/reporters/markdownReporter";
-import type { BenchmarkReport } from "../../benchmarks/types";
+import { createMarkdownReport } from "../src/reporters/markdownReporter";
+import type { BenchmarkReport } from "../src/types";
 
 describe("benchmark markdown reporter", () => {
   it("renders summary and measured rows", () => {

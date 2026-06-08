@@ -1,20 +1,15 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";
+import { readAppSource, readAtlasReactSource } from "../monorepoPaths.js";
 import { hasPackage, pass, skip, warn } from "./helpers";
-
-function source(path: string): string {
-  return readFileSync(join(process.cwd(), path), "utf8");
-}
 
 export async function interactionValidator(
   _context: BenchmarkContext,
 ): Promise<ValidatorResult> {
   const results: CheckResult[] = [];
-  const viewerSource = source("components/atlas/AtlasViewer.tsx");
-  const canvasSource = source("components/atlas/AtlasCanvas.tsx");
-  const apiSource = source("lib/atlas/api.ts");
-  const queryKeySource = source("lib/atlas/queryKeys.ts");
+  const viewerSource = readAppSource("components/atlas/AtlasViewer.tsx");
+  const canvasSource = readAtlasReactSource("components/atlas/AtlasCanvas.tsx");
+  const apiSource = readAppSource("lib/atlas/api.ts");
+  const queryKeySource = readAppSource("lib/atlas/queryKeys.ts");
 
   const fetchUsesAbortSignal =
     /signal\?:\s*AbortSignal/.test(apiSource) && /fetch\(url,\s*\{\s*signal\s*\}/.test(apiSource);

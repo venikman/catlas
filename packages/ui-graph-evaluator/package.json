@@ -1,0 +1,31 @@
+{
+  "name": "@catlas/ui-graph-evaluator",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Portable CLI evaluator for canvas and SVG UI graph surfaces.",
+  "bin": {
+    "ui-graph-evaluator": "./dist/run-ui-evaluator.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/run-ui-evaluator.d.ts",
+      "import": "./dist/run-ui-evaluator.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/run-ui-evaluator.js",
+    "test": "vitest run",
+    "bench": "tsx src/run-ui-evaluator.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}
