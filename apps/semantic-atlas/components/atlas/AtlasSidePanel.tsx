@@ -29,6 +29,10 @@ export function AtlasSidePanel({
   const entity = entityQuery.data?.entity;
   const hasSelection = Boolean(entityId || cluster);
 
+  if (!hasSelection) {
+    return null;
+  }
+
   return (
     <aside
       className={`atlas-panel absolute z-30 flex flex-col rounded-lg ${
@@ -87,10 +91,10 @@ export function AtlasSidePanel({
               <Pin size={15} className="mt-1 text-slate-500" />
             </div>
             <div className="mt-4 flex gap-5 border-b border-slate-200 text-[12px] font-medium">
-              <button className="border-b-2 border-blue-600 pb-2 text-blue-600">
+              <button className="border-b-2 border-blue-600 pb-2 text-blue-600" disabled>
                 Overview
               </button>
-              <button className="pb-2 text-slate-500">Points ({entity.views.length})</button>
+              <button className="pb-2 text-slate-500" disabled>Points ({entity.views.length})</button>
             </div>
           </div>
 
@@ -145,16 +149,16 @@ export function AtlasSidePanel({
           </div>
 
           <div className="flex h-12 items-center justify-between border-t border-slate-200 px-4">
-            <button aria-label="Maximize inspector">
+            <button aria-label="Maximize inspector" className="opacity-45" disabled>
               <Maximize2 size={16} className="text-slate-500" />
             </button>
-            <button aria-label="Share entity">
+            <button aria-label="Share entity" className="opacity-45" disabled>
               <Share2 size={16} className="text-slate-500" />
             </button>
-            <button aria-label="Open entity">
+            <button aria-label="Open entity" className="opacity-45" disabled>
               <ExternalLink size={16} className="text-slate-500" />
             </button>
-            <button aria-label="More actions">
+            <button aria-label="More actions" className="opacity-45" disabled>
               <MoreHorizontal size={17} className="text-slate-500" />
             </button>
           </div>
@@ -195,10 +199,10 @@ function ClusterInspector({
           <Pin size={15} className="mt-1 text-slate-500" />
         </div>
         <div className="mt-4 flex gap-5 border-b border-slate-200 text-[12px] font-medium">
-          <button className="border-b-2 border-blue-600 pb-2 text-blue-600">
+          <button className="border-b-2 border-blue-600 pb-2 text-blue-600" disabled>
             Overview
           </button>
-          <button className="pb-2 text-slate-500">Points ({pointCount})</button>
+          <button className="pb-2 text-slate-500" disabled>Points ({pointCount})</button>
         </div>
       </div>
 
@@ -262,16 +266,16 @@ function ClusterInspector({
       </div>
 
       <div className="flex h-12 items-center justify-between border-t border-slate-200 px-4">
-        <button aria-label="Maximize inspector">
+        <button aria-label="Maximize inspector" className="opacity-45" disabled>
           <Maximize2 size={16} className="text-slate-500" />
         </button>
-        <button aria-label="Share cluster">
+        <button aria-label="Share cluster" className="opacity-45" disabled>
           <Share2 size={16} className="text-slate-500" />
         </button>
-        <button aria-label="Open cluster">
+        <button aria-label="Open cluster" className="opacity-45" disabled>
           <ExternalLink size={16} className="text-slate-500" />
         </button>
-        <button aria-label="More actions">
+        <button aria-label="More actions" className="opacity-45" disabled>
           <MoreHorizontal size={17} className="text-slate-500" />
         </button>
       </div>

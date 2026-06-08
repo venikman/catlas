@@ -143,7 +143,7 @@ Payload safety:
 
 Frontend/render safety:
 
-- the current renderer initializes through the no-WebGL SVG path
+- the current renderer initializes through the no-WebGL Canvas 2D texture plus SVG overlay path
 - renderer test hooks are present
 - high-zoom renderer inputs are bounded
 - browser console errors/warnings and failed network requests are captured when Playwright can launch a browser

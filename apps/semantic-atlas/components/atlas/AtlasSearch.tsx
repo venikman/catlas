@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Search, Settings2, X } from "lucide-react";
-import { Fragment, useDeferredValue, useState } from "react";
+import { Fragment, useState } from "react";
 import { searchAtlas } from "@/lib/atlas/api";
 import { ATLAS_CLIENT_CACHE } from "@/lib/atlas/cachePolicy";
 import { atlasQueryKeys } from "@/lib/atlas/queryKeys";
@@ -59,29 +59,30 @@ export function AtlasSearch({
   onResultSelect: (result: AtlasSearchResult) => void;
   selectedView: string;
 }) {
-  const [q, setQ] = useState("graph neural networks");
-  const deferredQ = useDeferredValue(q.trim());
+  const [q, setQ] = useState("");
+  const queryText = q.trim();
   const query = useQuery({
-    enabled: deferredQ.length >= 2,
-    queryKey: atlasQueryKeys.search({ view: selectedView, q: deferredQ }),
-    queryFn: ({ signal }) => searchAtlas({ view: selectedView, q: deferredQ, signal }),
+    enabled: queryText.length >= 2,
+    queryKey: atlasQueryKeys.search({ view: selectedView, q: queryText }),
+    queryFn: ({ signal }) => searchAtlas({ view: selectedView, q: queryText, signal }),
     staleTime: ATLAS_CLIENT_CACHE.search.staleTime,
     gcTime: ATLAS_CLIENT_CACHE.search.gcTime,
   });
 
   const results = query.data?.results ?? [];
+  const showResults = queryText.length >= 2;
 
   return (
-    <section className="atlas-panel w-full rounded-lg p-3 sm:w-[376px]">
+    <section className="atlas-panel w-full rounded-md p-2 sm:w-[620px]">
       <div className="flex items-center gap-2">
-        <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-md border border-slate-200 bg-white px-3">
+        <div className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-md border border-slate-200/80 bg-white px-4">
           <Search size={17} className="text-slate-500" />
           <input
             className="min-w-0 flex-1 bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-slate-400"
             data-testid="atlas-search-input"
             value={q}
             onChange={(event) => setQ(event.target.value)}
-            placeholder="Search labels or entities"
+            placeholder="Search"
           />
           {q ? (
             <button aria-label="Clear search" onClick={() => setQ("")}>
@@ -89,25 +90,32 @@ export function AtlasSearch({
             </button>
           ) : null}
         </div>
-        <button className="atlas-control grid h-10 w-10 place-items-center rounded-md" aria-label="Search settings">
+        <button
+          className="atlas-control grid h-12 w-12 place-items-center rounded-md opacity-45"
+          aria-label="Search settings"
+          disabled
+        >
           <Settings2 size={16} />
         </button>
       </div>
 
-      <div className="mt-4 flex border-b border-slate-200 text-[12px] font-medium text-slate-500">
+      {showResults ? (
+        <>
+      <div className="mt-3 flex border-b border-slate-200 text-[12px] font-medium text-slate-500">
         {["All", "Clusters", "Entities"].map((tab, index) => (
           <button
             key={tab}
             className={`h-8 px-4 ${
               index === 0 ? "border-b-2 border-blue-600 text-slate-950" : ""
             }`}
+            disabled
           >
             {tab} {index === 0 ? `(${results.length})` : ""}
           </button>
         ))}
       </div>
 
-      <div className="atlas-scrollbar mt-4 max-h-[270px] overflow-y-auto pr-1 sm:max-h-[330px]">
+      <div className="atlas-scrollbar mt-3 max-h-[300px] overflow-y-auto pr-1">
         <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
           Top Result
         </div>
@@ -166,13 +174,18 @@ export function AtlasSearch({
                 </button>
               </Fragment>
             ))}
-            <button className="flex w-full items-center justify-between px-1 pt-2 text-left text-[12px] font-medium text-blue-600">
-              <span>View all results for "{deferredQ}"</span>
+            <button
+              className="flex w-full cursor-not-allowed items-center justify-between px-1 pt-2 text-left text-[12px] font-medium text-blue-600 opacity-55"
+              disabled
+            >
+              <span>View all results for "{queryText}"</span>
               <span>&gt;</span>
             </button>
           </div>
         )}
       </div>
+        </>
+      ) : null}
     </section>
   );
 }

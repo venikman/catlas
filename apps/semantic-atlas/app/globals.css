@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --atlas-bg: #f8f6f0;
-  --atlas-paper: #fffefa;
-  --atlas-panel: rgba(255, 254, 250, 0.88);
-  --atlas-border: rgba(29, 35, 48, 0.12);
+  --atlas-bg: #efefec;
+  --atlas-paper: #ffffff;
+  --atlas-panel: rgba(255, 255, 255, 0.86);
+  --atlas-border: rgba(30, 41, 59, 0.13);
   --atlas-text: #172033;
   --atlas-muted: #697386;
   --atlas-blue: #2677ff;
-  --atlas-shadow: 0 18px 60px rgba(42, 49, 66, 0.14);
+  --atlas-shadow: 0 10px 32px rgba(42, 49, 66, 0.1);
 }
 
 * {

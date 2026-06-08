@@ -9,7 +9,7 @@ Semantic Atlas is LOD-first. The API must never transfer the whole corpus for a 
 - High zoom: raw viewport points only, capped by `ATLAS_MAX_POINTS_PER_RESPONSE`.
 - Entity metadata: lazy-loaded through `/api/atlas/entity/[id]` only after selection.
 
-The current verified prototype uses deterministic synthetic data with about `170,432` point rows in demo mode. The renderer is intentionally no-WebGL SVG/CSS to avoid Firefox/macOS WebGL diagnostics. This is acceptable for the current capped MVP, but dense 1M/10M paths need tiled aggregate layers and likely canvas2D, raster tiles, vector tiles, or another binary-friendly renderer for hot dense point layers.
+The current verified prototype uses deterministic synthetic data with about `170,432` point rows in demo mode. The renderer is intentionally no-WebGL and uses Canvas 2D for dense map texture plus SVG for labels and overlays. This is acceptable for the current capped MVP, but dense 1M/10M paths need tiled aggregate layers and likely raster tiles, vector tiles, WebGL, or another binary-friendly renderer for hot dense point layers.
 
 ## LOD Behavior
 
