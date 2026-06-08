@@ -117,6 +117,10 @@ npx ui-graph-evaluator \
   --gate
 ```
 
+## Adoption maturity plan
+
+[`docs/atlas-adoption-maturity-plan.md`](docs/atlas-adoption-maturity-plan.md) — execution plan for other products adopting Catlas: M0-M5 maturity model, docs, examples, benchmark gates, and agent-assisted playbooks.
+
 ## Production notes
 
 [`docs/atlas-production.md`](docs/atlas-production.md) — bounds, caching, indexes, and scale path.
