@@ -120,3 +120,7 @@ npx ui-graph-evaluator \
 ## Production notes
 
 [`docs/atlas-production.md`](docs/atlas-production.md) — bounds, caching, indexes, and scale path.
+
+## Adoption maturity plan
+
+[`docs/atlas-adoption-maturity-plan.md`](docs/atlas-adoption-maturity-plan.md) proposes the documentation spine, examples, agent-assisted playbooks, Postgres data-preparation flow, styling guidance, benchmark gates, and evidence templates needed before other products can safely adopt the benchmark tools and renderer with real data.
