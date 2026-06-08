@@ -2,6 +2,12 @@
 
 import type { AtlasLodLayer } from "@catlas/atlas-react";
 
+const LOD_ZOOM_TARGETS: Record<AtlasLodLayer, number> = {
+  density: 1.2,
+  clusters: 4.2,
+  points: 7.2,
+};
+
 export function AtlasLodControls({
   active,
   onZoomChange,
@@ -19,9 +25,7 @@ export function AtlasLodControls({
           className={active === layer ? "active" : ""}
           data-atlas-kind="lod-button"
           data-atlas-lod={layer}
-          onClick={() =>
-            onZoomChange(layer === "density" ? 1.2 : layer === "clusters" ? 4.2 : 7.2)
-          }
+          onClick={() => onZoomChange(LOD_ZOOM_TARGETS[layer])}
         >
           {layer}
         </button>
