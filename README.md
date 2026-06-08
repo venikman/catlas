@@ -72,6 +72,20 @@ npm run dev -w @catlas/semantic-atlas
 
 The example imports the map only via `@catlas/atlas-react`; fetching and API routes stay in the app.
 
+Minimal Vite consumer proof (`examples/atlas-consumer`):
+
+```bash
+npm run example:atlas-consumer:build
+npm run example:atlas-consumer:preview
+npx ui-graph-evaluator \
+  --url=http://127.0.0.1:4173 \
+  --root-selector='[data-testid="consumer-root"]' \
+  --graph-selector='[data-testid="semantic-atlas-map"]' \
+  --overlay-selector='[data-atlas-kind="density-label"]' \
+  --interaction=wheel-pan \
+  --gate
+```
+
 ## Workspace validation
 
 ```bash
