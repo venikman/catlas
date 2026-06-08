@@ -80,8 +80,36 @@ async function activeLod(page: Page): Promise<string | null> {
 }
 
 async function zoomValue(page: Page): Promise<number> {
-  const raw = await page.locator('input[aria-label="Zoom"]').inputValue();
-  return Number.parseFloat(raw);
+  const slider = page.locator('input[aria-label="Zoom"]');
+  if ((await slider.count()) === 1) {
+    return Number.parseFloat(await slider.inputValue());
+  }
+
+  const raw = await page.locator('output[aria-label="Zoom level"]').innerText();
+  return Number.parseFloat(raw.replace(/x$/i, ""));
+}
+
+async function openViewSettingsTab(page: Page) {
+  const viewTab = page.locator(".sidecar-tabs button", { hasText: "View" });
+  if ((await viewTab.count()) === 1) {
+    await viewTab.click();
+  }
+}
+
+async function closeInspector(page: Page): Promise<boolean> {
+  const closeButton = page.locator('button[aria-label="Close inspector"]');
+  if ((await closeButton.count()) === 1) {
+    await closeButton.click();
+    return true;
+  }
+
+  const collapseButton = page.locator('button[aria-label="Collapse rail"]');
+  if ((await collapseButton.count()) === 1) {
+    await collapseButton.click();
+    return true;
+  }
+
+  return false;
 }
 
 async function waitForAtlasIdle(page: Page, waitMs: number) {
@@ -140,6 +168,7 @@ async function clickLod(page: Page, checks: AuditCheck[], lod: string, waitMs: n
 }
 
 async function auditLayerToggles(page: Page, checks: AuditCheck[], waitMs: number) {
+  await openViewSettingsTab(page);
   const layers = await page
     .locator('[data-atlas-kind="layer-toggle"]')
     .evaluateAll((buttons) =>
@@ -178,6 +207,7 @@ async function auditLayerToggles(page: Page, checks: AuditCheck[], waitMs: numbe
 }
 
 async function auditViewButtons(page: Page, checks: AuditCheck[], waitMs: number) {
+  await openViewSettingsTab(page);
   const views = await page
     .locator('[data-atlas-kind="view-button"]')
     .evaluateAll((buttons) =>
@@ -204,6 +234,7 @@ async function auditViewButtons(page: Page, checks: AuditCheck[], waitMs: number
 }
 
 async function auditSearchAndInspector(page: Page, checks: AuditCheck[], waitMs: number) {
+  await openViewSettingsTab(page);
   const allView = page.locator('[data-atlas-kind="view-button"][data-atlas-view="research-domains"]');
   if ((await allView.count()) === 1) {
     await allView.click();
@@ -231,14 +262,17 @@ async function auditSearchAndInspector(page: Page, checks: AuditCheck[], waitMs:
     });
     checks.push(check("pass", "Search result opens inspector", "Side panel became visible."));
     await assertNonblankCanvas(page, checks, "Search result selection");
-    const close = page.locator('button[aria-label="Close inspector"]');
-    await close.click();
+    const closed = await closeInspector(page);
     await page.waitForTimeout(waitMs);
     const panelVisible = await page.locator('[data-testid="atlas-side-panel"]').isVisible();
     checks.push(
-      !panelVisible
+      closed && !panelVisible
         ? check("pass", "Inspector close works after search selection", "Side panel hidden.")
-        : check("fail", "Inspector close works after search selection", "Side panel remained visible."),
+        : check(
+            "fail",
+            "Inspector close works after search selection",
+            closed ? "Side panel remained visible." : "No close or collapse control found.",
+          ),
     );
   }
 
@@ -258,16 +292,16 @@ async function auditSearchAndInspector(page: Page, checks: AuditCheck[], waitMs:
 
 async function auditClusterClick(page: Page, checks: AuditCheck[], waitMs: number) {
   await clickLod(page, checks, "clusters", waitMs);
-  const clusters = page.locator('svg [data-atlas-kind="cluster"]');
-  const count = await clusters.count();
+  const clusterHitTargets = page.locator('svg [data-atlas-kind="cluster-hit"]');
+  const count = await clusterHitTargets.count();
   checks.push(
     count > 0
-      ? check("pass", "Cluster click target exists", `Found ${count} cluster nodes.`)
-      : check("fail", "Cluster click target exists", "No cluster nodes found."),
+      ? check("pass", "Cluster click target exists", `Found ${count} cluster hit targets.`)
+      : check("fail", "Cluster click target exists", "No cluster hit targets found."),
   );
   if (count === 0) return;
 
-  const visibleClusterIndex = await clusters.evaluateAll((nodes) => {
+  const visibleClusterIndex = await clusterHitTargets.evaluateAll((nodes) => {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     return nodes.findIndex((node) => {
@@ -289,13 +323,18 @@ async function auditClusterClick(page: Page, checks: AuditCheck[], waitMs: numbe
   );
   if (visibleClusterIndex < 0) return;
 
-  await clusters.nth(visibleClusterIndex).click({ force: true });
+  await clusterHitTargets.nth(visibleClusterIndex).click();
   await page.locator('[data-testid="atlas-side-panel"]').waitFor({
     state: "visible",
     timeout: 8000,
   });
   checks.push(check("pass", "Cluster click opens inspector", "Side panel became visible."));
-  await page.locator('button[aria-label="Close inspector"]').click();
+  const closed = await closeInspector(page);
+  checks.push(
+    closed
+      ? check("pass", "Cluster inspector close target exists", "Close or collapse control clicked.")
+      : check("fail", "Cluster inspector close target exists", "No close or collapse control found."),
+  );
   await page.waitForTimeout(waitMs);
 }
 
@@ -330,7 +369,9 @@ async function auditViewportInteraction(page: Page, checks: AuditCheck[], waitMs
 
 async function auditZoomAndHome(page: Page, checks: AuditCheck[], waitMs: number) {
   const before = await zoomValue(page);
-  await page.locator('[data-atlas-kind="map-control"][data-atlas-action="zoom-in"]').click();
+  await page
+    .locator('[data-atlas-kind="map-control"][data-atlas-action="zoom-in"]')
+    .click();
   await waitForAtlasIdle(page, waitMs);
   const zoomedIn = await zoomValue(page);
   checks.push(
@@ -339,7 +380,9 @@ async function auditZoomAndHome(page: Page, checks: AuditCheck[], waitMs: number
       : check("fail", "Zoom in changes zoom", `${before} -> ${zoomedIn}.`),
   );
 
-  await page.locator('[data-atlas-kind="map-control"][data-atlas-action="zoom-out"]').click();
+  await page
+    .locator('[data-atlas-kind="map-control"][data-atlas-action="zoom-out"]')
+    .click();
   await waitForAtlasIdle(page, waitMs);
   const zoomedOut = await zoomValue(page);
   checks.push(
@@ -350,7 +393,21 @@ async function auditZoomAndHome(page: Page, checks: AuditCheck[], waitMs: number
 
   await clickLod(page, checks, "points", waitMs);
   const beforeHome = await zoomValue(page);
-  await page.locator('[data-atlas-kind="map-control"][data-atlas-action="home"]').click();
+  await page
+    .locator('[data-atlas-kind="map-control"][data-atlas-action="home"]')
+    .click();
+  await page
+    .waitForFunction(
+      (previous) => {
+        const raw =
+          document.querySelector('output[aria-label="Zoom level"]')?.textContent ?? "";
+        const next = Number.parseFloat(raw.replace(/x$/i, ""));
+        return Number.isFinite(next) && next < previous;
+      },
+      beforeHome,
+      { timeout: 5000 },
+    )
+    .catch(() => undefined);
   await waitForAtlasIdle(page, waitMs);
   const afterHome = await zoomValue(page);
   checks.push(
@@ -361,29 +418,31 @@ async function auditZoomAndHome(page: Page, checks: AuditCheck[], waitMs: number
 }
 
 async function auditDisabledPlaceholders(page: Page, checks: AuditCheck[]) {
-  const disabledControls = await page.evaluate(() => {
-    const labels = [
-      "Help",
-      "Search settings",
-      "Locate selected",
-      "Layer stack",
-      "Renderer settings",
+  const functionalControls = await page.evaluate(() => {
+    const selectors = [
+      'button[aria-label="Zoom in"]',
+      'button[aria-label="Zoom out"]',
+      'button[aria-label="Fit map"]',
+      '[data-testid="atlas-search-input"]',
     ];
-    return labels.map((label) => {
-      const button = document.querySelector<HTMLButtonElement>(
-        `button[aria-label="${label}"]`,
-      );
-      return { disabled: Boolean(button?.disabled), label, present: Boolean(button) };
+    return selectors.map((selector) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      const disabled =
+        element instanceof HTMLButtonElement ||
+        element instanceof HTMLInputElement
+          ? Boolean(element.disabled)
+          : false;
+      return { disabled, present: Boolean(element), selector };
     });
   });
 
-  for (const item of disabledControls) {
+  for (const item of functionalControls) {
     checks.push(
-      item.present && item.disabled
-        ? check("pass", `Placeholder ${item.label} is disabled`, "No fake click target.")
+      item.present && !item.disabled
+        ? check("pass", `Control ${item.selector} is interactive`, "Enabled and present.")
         : check(
             "fail",
-            `Placeholder ${item.label} is disabled`,
+            `Control ${item.selector} is interactive`,
             `present=${item.present}, disabled=${item.disabled}.`,
           ),
     );
