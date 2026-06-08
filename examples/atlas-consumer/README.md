@@ -14,7 +14,7 @@ npm run example:atlas-consumer:preview
 Then evaluate it:
 
 ```bash
-./dist/ui-evaluator/benchmarks/run-ui-evaluator.js \
+npx ui-graph-evaluator \
   --url=http://127.0.0.1:4173 \
   --root-selector='[data-testid="consumer-root"]' \
   --graph-selector='[data-testid="semantic-atlas-map"]' \
