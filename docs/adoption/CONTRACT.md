@@ -59,18 +59,30 @@ spanY = spanX * 0.72            // 0.72 = viewport aspect ratio (height : width)
 bbox  = { center ± spanX/2, center ± spanY/2 }   // rounded to 4 dp
 ```
 
-Parameterized by `worldBounds` (what Cursor implements), so any extent fits at low zoom with
-the same ~7% margin:
+Parameterized by `worldBounds` (what Cursor implements), preserving today's default framing:
 
 ```
+A          = 0.72                    // viewport aspect ratio (height : width), fixed by the canvas — not a world ratio
+margin     = 15 / 14                 // ~7% breathing room (from the default tuning)
 worldWidth = maxX - minX
-spanX = worldWidth * (15 / 14) / 1.32^zoom
-spanY = spanX * 0.72
+spanX      = worldWidth * margin / 1.32^zoom
+spanY      = spanX * A
 ```
 
-The cross-slice agreement is fundamentally the **extent** (`worldBounds`); the tiler and
-validator need only the extent. The formula above is the renderer's reference parameterization
-so its `worldBounds` generalization is unambiguous.
+**Tall / non-square extents — `spanY` is width-derived on purpose.** Because `A` is fixed by the
+canvas, the renderer **width-fits** at zoom 0. A world taller than `A * worldWidth` (≈ 0.72 × width)
+does *not* fully fit at zoom 0 — its extra height is reached by panning. (Thanks @codex — the earlier
+"any extent fits" wording was wrong for tall bounds.) The tiler and validator still cover the **full**
+`worldBounds` regardless of framing. Two ways to handle a tall extent, preferred first:
+
+1. **Coordinate recipe (Codex):** normalize `x/y` into an extent whose aspect ratio is ≲ `A`, so the
+   zoom-0 frame shows everything relevant. Keeps the default framing — recommended.
+2. **Renderer (Cursor), optional:** fit the *limiting* dimension at zoom 0
+   (`spanX0 = max(worldWidth, worldHeight / A) * margin`). Guarantees tall worlds fit, but **changes
+   the default square-world framing and the visual baseline** — so it's a renderer decision, not pinned.
+
+The cross-slice agreement is fundamentally the **extent** (`worldBounds`); the tiler and validator
+need only that. The formula is the renderer's reference so its `worldBounds` generalization is unambiguous.
 
 ## 4. Selector contract
 
