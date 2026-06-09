@@ -1,13 +1,12 @@
-import { getAtlasSourceMode } from "@/lib/atlas/db";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
-import { getAtlasStore } from "@/lib/atlas/store";
+import { getAtlasStore, isAtlasStoreAvailable } from "@/lib/atlas/store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const timer = createAtlasRouteTimer("views");
-  if (getAtlasSourceMode() === "unavailable") {
+  if (!isAtlasStoreAvailable()) {
     return atlasError("DATABASE_URL is not configured.", {
       code: "ATLAS_DATABASE_UNAVAILABLE",
       status: 503,

@@ -2,6 +2,7 @@ import type { AtlasStore } from "@catlas/atlas-react/contract";
 
 import {
   getAtlasEntity,
+  getAtlasSourceMode,
   getAtlasStats,
   listAtlasClusters,
   listAtlasDensityTiles,
@@ -41,4 +42,14 @@ export const referenceAtlasStore: AtlasStore = {
  */
 export function getAtlasStore(): AtlasStore {
   return referenceAtlasStore;
+}
+
+/**
+ * Whether the active store can serve requests. For the reference store this maps to
+ * `getAtlasSourceMode()` (postgres or demo); an adopter who swaps `getAtlasStore()` owns
+ * this too — return `true` if your store is always reachable. Keeps the routes decoupled
+ * from `db.ts` so a custom store isn't gated by the reference `DATABASE_URL` (Codex #14 P1).
+ */
+export function isAtlasStoreAvailable(): boolean {
+  return getAtlasSourceMode() !== "unavailable";
 }

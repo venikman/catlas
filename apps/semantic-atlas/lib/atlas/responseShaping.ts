@@ -86,20 +86,20 @@ export function lightweightEntity(
   options: LightweightEntityOptions = {},
 ): AtlasEntityDetails {
   const { metadataAllowList, includePayloadSummary = true } = options;
-  const metadata = metadataAllowList
+  const sourceMetadata = entity.metadata ?? {};
+  const allowed = metadataAllowList ? new Set(metadataAllowList) : null;
+  const metadata = allowed
     ? Object.fromEntries(
-        Object.entries(entity.metadata).filter(([key]) =>
-          metadataAllowList.includes(key),
-        ),
+        Object.entries(sourceMetadata).filter(([key]) => allowed.has(key)),
       )
-    : entity.metadata;
+    : sourceMetadata;
   return {
     entityId: entity.entityId,
     label: truncateAtlasLabel(entity.label),
     entityType: entity.entityType,
-    payloadSummary: includePayloadSummary ? entity.payloadSummary : "",
+    payloadSummary: includePayloadSummary ? (entity.payloadSummary ?? "") : "",
     metadata,
-    views: entity.views.map((view) => ({
+    views: (entity.views ?? []).map((view) => ({
       viewId: view.viewId,
       viewSlug: view.viewSlug,
       x: roundCoord(view.x),
