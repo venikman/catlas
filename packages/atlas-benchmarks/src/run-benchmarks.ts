@@ -16,7 +16,7 @@ import type {
   ValidatorResult,
 } from "./types";
 import { appRoot, monorepoRoot } from "./monorepoPaths.js";
-import { VALIDATORS } from "./validators";
+import { VALIDATORS } from "./validators/index.js";
 import { fail, isServerReachable } from "./validators/helpers";
 
 function arg(name: string, fallback?: string): string | undefined {

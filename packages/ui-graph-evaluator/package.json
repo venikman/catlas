@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Portable CLI evaluator for canvas and SVG UI graph surfaces.",
   "bin": {
-    "ui-graph-evaluator": "./dist/run-ui-evaluator.js"
+    "ui-graph-evaluator": "dist/run-ui-evaluator.js"
   },
   "exports": {
     ".": {
