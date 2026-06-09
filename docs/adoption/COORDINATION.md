@@ -52,15 +52,19 @@ Changing any of these is a contract change → bump the version, notify all owne
 
 ### Devin
 - **Reconcile (`docacc-1`,`design-7`/`prod-5`,`prod-1/2`,`contract-1`):** fix the broken `benchmarks/sql/` path in all 3 places; assert every doc npm-script resolves; make M5 extend `atlas-production.md`; declare `backend-integration.md` canonical; define aggregate refresh/orphan-cleanup semantics.
-- **Packaging (`deps-1..5`):** `prepublishOnly`/`prepack` build hooks (publish currently ships empty); normalize React peer to `^18.3.0 || ^19.0.0` + `@types/react` optional + drop `react-dom` peer; decide `atlas-benchmarks` internal vs installable; add `engines.node`; add npm-audit line to evidence template.
+- **Packaging (`deps-1..5`):** `prepublishOnly` plus pack-time `prepack`/`prepare` build hooks (publish/pack currently ships empty); normalize React peer to `^18.3.0 || ^19.0.0` + `@types/react` optional + drop `react-dom` peer; decide `atlas-benchmarks` internal vs installable; add `engines.node`; add npm-audit line to evidence template.
 - **Plan rewrite (`goal-*`/`skills-*`):** invert phases (skills first); rewrite the maturity table (M0/M1 = baseline-done, a working skill as M1/M2 deliverable); adoption-centric "Done when"; delete `agent-playbooks.md`; bind FPF to benchmark finding ids; fold in D1–D3.
 - **Done when:** every copyable command resolves; clean-clone `npm publish --dry-run` includes `dist/`; the plan leads with skills.
 
 ## Waves & parallelism (~80% parallel)
 
-- **Wave 0 — pin the contract** (this commit). Serial. ✅ *pending sign-off*
+- **Wave 0 — pin the contract** (merged in #10). Serial. ✅
 - **Wave 1 — all four in parallel** against the pinned contract, disjoint working sets above.
-- **Wave 2 — two hand-offs:** Codex P5 needs Devin's build hook; Claude Code skills + the "educational" benchmark content need Codex's real M2 mapping + Devin's doc links.
+- **Wave 2 — two hand-offs only:**
+  - Codex's pack smoke test waits on Devin's pack-time build hook (`prepack` or `prepare`; `prepublishOnly` alone does not run for `npm pack`).
+  - Claude Code's skills + the "educational" benchmark wording wait on Codex's real M2 mapping (a concrete dataset to validate against) + Devin's doc links mapping each benchmark finding ID to the canonical remediation section in the adoption docs.
+
+Everything else finishes in Wave 1.
 
 ## Shared-file owners (avoid collisions)
 
@@ -73,7 +77,7 @@ Changing any of these is a contract change → bump the version, notify all owne
 
 ## Status
 
-- [x] Wave 0 — contract pinned *(pending sign-off + merge)*
+- [x] Wave 0 — contract pinned *(merged in #10)*
 - [ ] Claude Code — modular boundary + gate
 - [ ] Codex — conformance + aggregation + recipe
 - [ ] Cursor — renderer surface
