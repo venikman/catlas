@@ -60,6 +60,14 @@ const sampleCluster: AtlasCluster = {
   viewId: "v1",
 };
 
+const sampleClusterB: AtlasCluster = {
+  ...sampleCluster,
+  centroidX: 0.6,
+  clusterId: "cluster-2",
+  id: "c2",
+  label: "Engineering",
+};
+
 describe("renderer adoption surface", () => {
   it("derives bbox spans from worldBounds per contract §3", () => {
     const unitWorld = { minX: 0, maxX: 1, minY: 0, maxY: 1 };
@@ -265,7 +273,7 @@ describe("renderer adoption surface", () => {
   });
 
   it("exposes cluster hit targets to assistive tech", () => {
-    const { container } = render(
+    render(
       <SemanticAtlasMap
         clusters={[sampleCluster]}
         initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
@@ -274,15 +282,18 @@ describe("renderer adoption surface", () => {
       />,
     );
 
-    const hitTarget = container.querySelector('[data-atlas-kind="cluster-hit"]');
-    expect(hitTarget).toHaveAttribute("aria-label", "Select cluster: Research");
-    expect(hitTarget).toHaveAttribute("role", "button");
+    // getByRole walks the computed accessibility tree (respects aria-hidden), so
+    // this fails if an aria-hidden ancestor ever re-hides the button again —
+    // unlike a querySelector, which would still pass on the original bug.
+    const hitTarget = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
     expect(hitTarget).toHaveAttribute("tabindex", "0");
   });
 
   it("activates clusters from the keyboard", () => {
     const onSelectCluster = vi.fn();
-    const { container } = render(
+    render(
       <SemanticAtlasMap
         clusters={[sampleCluster]}
         initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
@@ -292,10 +303,94 @@ describe("renderer adoption surface", () => {
       />,
     );
 
-    const clusterButton = container.querySelector('[data-atlas-kind="cluster-hit"]');
-    expect(clusterButton).toBeTruthy();
-    fireEvent.keyDown(clusterButton!, { key: "Enter" });
+    const clusterButton = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
+    fireEvent.keyDown(clusterButton, { key: "Enter" });
+    fireEvent.keyDown(clusterButton, { key: " " });
 
-    expect(onSelectCluster).toHaveBeenCalledWith(sampleCluster);
+    expect(onSelectCluster).toHaveBeenCalledTimes(2);
+    expect(onSelectCluster).toHaveBeenLastCalledWith(sampleCluster);
+  });
+
+  it("uses roving tabindex so the cluster layer is one tab stop", () => {
+    render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster, sampleClusterB]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        status="ready"
+      />,
+    );
+
+    const research = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
+    const engineering = screen.getByRole("button", {
+      name: "Select cluster: Engineering",
+    });
+
+    // Exactly one cluster is reachable via Tab at a time.
+    expect(research).toHaveAttribute("tabindex", "0");
+    expect(engineering).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("rove with arrows (without panning) and exits to the surface on Escape", () => {
+    const onViewportChange = vi.fn();
+    render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster, sampleClusterB]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        onViewportChange={onViewportChange}
+        status="ready"
+      />,
+    );
+
+    const research = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
+    const engineering = screen.getByRole("button", {
+      name: "Select cluster: Engineering",
+    });
+
+    research.focus();
+    fireEvent.keyDown(research, { key: "ArrowRight" });
+
+    // Focus moved to the next cluster; the map did NOT pan (event was stopped).
+    expect(document.activeElement).toBe(engineering);
+    expect(engineering).toHaveAttribute("tabindex", "0");
+    expect(research).toHaveAttribute("tabindex", "-1");
+    expect(onViewportChange).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(engineering, { key: "Escape" });
+    expect(document.activeElement).toBe(screen.getByRole("application"));
+  });
+
+  it("announces cluster keyboard reachability in the surface label", () => {
+    const { rerender } = render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        status="ready"
+      />,
+    );
+    expect(screen.getByRole("application")).toHaveAccessibleName(
+      /Press Tab to reach clusters/,
+    );
+
+    // No hint when there are no clusters to reach.
+    rerender(
+      <SemanticAtlasMap
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        points={[samplePoint]}
+        status="ready"
+      />,
+    );
+    expect(screen.getByRole("application")).not.toHaveAccessibleName(
+      /Press Tab to reach clusters/,
+    );
   });
 });

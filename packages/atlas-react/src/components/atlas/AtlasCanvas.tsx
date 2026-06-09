@@ -958,6 +958,8 @@ export function AtlasCanvas({
   const dragRef = useRef<DragState | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ height: 0, width: 0 });
   const [hoveredClusterId, setHoveredClusterId] = useState<string | null>(null);
+  const [activeClusterIndex, setActiveClusterIndex] = useState(0);
+  const clusterHitRefs = useRef<Array<SVGCircleElement | null>>([]);
   const renderedPoints = useInterpolatedPoints(points);
 
   const densitySamples = useMemo(
@@ -987,8 +989,12 @@ export function AtlasCanvas({
   );
   const mapAriaLabel = useMemo(() => {
     const count = renderedCount ?? points.length;
-    return `Semantic atlas map. ${count} points rendered. Use arrow keys to pan and plus or minus to zoom.`;
-  }, [points.length, renderedCount]);
+    const clustersReachable = lod !== "points" && clusters.length > 0;
+    const clusterHint = clustersReachable
+      ? " Press Tab to reach clusters, then arrow keys to move between them, Enter to select, and Escape to return."
+      : "";
+    return `Semantic atlas map. ${count} points rendered. Use arrow keys to pan and plus or minus to zoom.${clusterHint}`;
+  }, [clusters.length, lod, points.length, renderedCount]);
   const pixelWorld = Math.max(spanX / 980, spanY / 720);
   const densityRegions = useMemo(
     () => buildDensityRegions(densitySamples, pixelWorld),
@@ -1408,6 +1414,19 @@ export function AtlasCanvas({
     }
   }
 
+  // Roving tabindex: the cluster layer is a single tab stop. Arrow keys move
+  // focus between clusters (and stop propagating so they don't also pan the
+  // map); Escape returns focus to the surface, where arrows pan again.
+  function focusClusterAt(nextIndex: number) {
+    if (clusters.length === 0) {
+      return;
+    }
+    const wrapped =
+      ((nextIndex % clusters.length) + clusters.length) % clusters.length;
+    setActiveClusterIndex(wrapped);
+    clusterHitRefs.current[wrapped]?.focus();
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.ctrlKey || event.metaKey || event.altKey) {
       return;
@@ -1680,11 +1699,16 @@ export function AtlasCanvas({
 
         {lod !== "points" && clusters.length > 0 && clusterLayerOpacity > 0 ? (
           <g data-atlas-layer="cluster-hit-targets">
-            {clusters.map((cluster) => {
+            {clusters.map((cluster, index) => {
               const style = getClusterVisualStyle(cluster, pixelWorld, false, palette);
+              const isRovingTarget =
+                index === Math.min(activeClusterIndex, clusters.length - 1);
               return (
                 <circle
                   key={`${cluster.id}-hit`}
+                  ref={(el) => {
+                    clusterHitRefs.current[index] = el;
+                  }}
                   aria-label={clusterSelectLabel(cluster)}
                   cx={cluster.centroidX}
                   cy={cluster.centroidY}
@@ -1695,18 +1719,48 @@ export function AtlasCanvas({
                   role="button"
                   r={style.radius}
                   stroke="transparent"
-                  tabIndex={0}
+                  tabIndex={isRovingTarget ? 0 : -1}
                   onClick={(event) => {
                     event.stopPropagation();
                     onSelectCluster(cluster);
                   }}
                   onKeyDown={(event) => {
-                    if (event.key !== "Enter" && event.key !== " ") {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onSelectCluster(cluster);
+                      return;
+                    }
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      containerRef.current?.focus();
+                      return;
+                    }
+                    if (event.key === "Home") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      focusClusterAt(0);
+                      return;
+                    }
+                    if (event.key === "End") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      focusClusterAt(clusters.length - 1);
+                      return;
+                    }
+                    const step =
+                      event.key === "ArrowRight" || event.key === "ArrowDown"
+                        ? 1
+                        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+                          ? -1
+                          : 0;
+                    if (step === 0) {
                       return;
                     }
                     event.preventDefault();
                     event.stopPropagation();
-                    onSelectCluster(cluster);
+                    focusClusterAt(index + step);
                   }}
                   onMouseEnter={() => {
                     setHoveredClusterId(cluster.clusterId);
