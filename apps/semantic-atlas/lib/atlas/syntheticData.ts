@@ -4,6 +4,11 @@ import type {
   AtlasPoint,
   AtlasView,
 } from "./types";
+import {
+  ATLAS_DEFAULT_WORLD_BOUNDS,
+  aggregateClusters,
+  buildDensityTiles,
+} from "@catlas/atlas-react/contract";
 
 export type SyntheticAtlasBatch = {
   views: AtlasView[];
@@ -276,126 +281,29 @@ export function createSyntheticEntityRows(
   );
 }
 
-function summarizeClusters(points: AtlasPoint[], views: AtlasView[]): AtlasCluster[] {
-  const clusters: AtlasCluster[] = [];
-  for (const view of views) {
-    const pointsByCluster = new Map<string, AtlasPoint[]>();
-    for (const point of points) {
-      if (point.viewId !== view.id) continue;
-      const existing = pointsByCluster.get(point.clusterId) ?? [];
-      existing.push(point);
-      pointsByCluster.set(point.clusterId, existing);
-    }
-
-    for (const [clusterId, clusterPoints] of pointsByCluster.entries()) {
-      const template = CLUSTERS.find((cluster) => cluster.id === clusterId) ?? CLUSTERS[0];
-      const xs = clusterPoints.map((point) => point.x);
-      const ys = clusterPoints.map((point) => point.y);
-      const centroidX = xs.reduce((sum, x) => sum + x, 0) / xs.length;
-      const centroidY = ys.reduce((sum, y) => sum + y, 0) / ys.length;
-      const boundsMinX = Math.min(...xs);
-      const boundsMaxX = Math.max(...xs);
-      const boundsMinY = Math.min(...ys);
-      const boundsMaxY = Math.max(...ys);
-      const radius = Math.max(boundsMaxX - boundsMinX, boundsMaxY - boundsMinY) / 2;
-      clusters.push({
-        id: `${view.id}-${clusterId}-lod-1`,
-        viewId: view.id,
-        viewSlug: view.slug,
-        lodLevel: 1,
-        clusterId,
-        label: template.label,
-        centroidX: Number(centroidX.toFixed(5)),
-        centroidY: Number(centroidY.toFixed(5)),
-        radius: Number(Math.max(radius, 0.15).toFixed(5)),
-        pointCount: clusterPoints.length,
-        importance: Number(
-          (
-            clusterPoints.reduce((sum, point) => sum + point.importance, 0) /
-            clusterPoints.length
-          ).toFixed(4),
-        ),
-        boundsMinX,
-        boundsMaxX,
-        boundsMinY,
-        boundsMaxY,
-        colorKey: template.colorKey,
-        metadata: {
-          representativeEntityIds: clusterPoints.slice(0, 5).map((point) => point.entityId),
-        },
-      });
-    }
-  }
-  return clusters;
+function clusterTemplate(clusterId: string): ClusterTemplate {
+  return CLUSTERS.find((cluster) => cluster.id === clusterId) ?? CLUSTERS[0];
 }
 
-function summarizeDensityTiles(points: AtlasPoint[], views: AtlasView[]): AtlasDensityTile[] {
-  const tiles = new Map<string, AtlasDensityTile>();
-  const z = 2;
-  const worldMin = -7;
-  const worldMax = 7;
-  const tileCount = 8;
-  const tileSize = (worldMax - worldMin) / tileCount;
+function summarizeClusters(points: AtlasPoint[]): AtlasCluster[] {
+  return aggregateClusters(points, {
+    colorKeyForCluster: (clusterId) => clusterTemplate(clusterId).colorKey,
+    labelForCluster: (clusterId) => clusterTemplate(clusterId).label,
+    metadataForCluster: (_clusterId, clusterPoints) => ({
+      representativeEntityIds: clusterPoints.slice(0, 5).map((point) => point.entityId),
+    }),
+    minRadius: 0.15,
+    worldBounds: ATLAS_DEFAULT_WORLD_BOUNDS,
+  });
+}
 
-  for (const view of views) {
-    for (const point of points) {
-      if (point.viewId !== view.id) continue;
-      const xTile = Math.max(
-        0,
-        Math.min(tileCount - 1, Math.floor((point.x - worldMin) / tileSize)),
-      );
-      const yTile = Math.max(
-        0,
-        Math.min(tileCount - 1, Math.floor((point.y - worldMin) / tileSize)),
-      );
-      const key = `${view.id}:${xTile}:${yTile}:${point.clusterId}`;
-      const existing = tiles.get(key);
-      if (existing) {
-        existing.pointCount += 1;
-        existing.densityPayload.points.push({
-          x: point.x,
-          y: point.y,
-          weight: Number((0.35 + point.importance).toFixed(3)),
-        });
-      } else {
-        const template = CLUSTERS.find((cluster) => cluster.id === point.clusterId) ?? CLUSTERS[0];
-        tiles.set(key, {
-          id: `${view.id}-tile-${z}-${xTile}-${yTile}-${point.clusterId}`,
-          viewId: view.id,
-          viewSlug: view.slug,
-          z,
-          xTile,
-          yTile,
-          bounds: {
-            minX: worldMin + xTile * tileSize,
-            maxX: worldMin + (xTile + 1) * tileSize,
-            minY: worldMin + yTile * tileSize,
-            maxY: worldMin + (yTile + 1) * tileSize,
-          },
-          densityPayload: {
-            colorKey: template.colorKey,
-            label: template.label,
-            points: [
-              {
-                x: point.x,
-                y: point.y,
-                weight: Number((0.35 + point.importance).toFixed(3)),
-              },
-            ],
-          },
-          pointCount: 1,
-        });
-      }
-    }
-  }
-
-  return Array.from(tiles.values()).map((tile) => ({
-    ...tile,
-    densityPayload: {
-      ...tile.densityPayload,
-      points: tile.densityPayload.points.slice(0, 40),
-    },
-  }));
+function summarizeDensityTiles(points: AtlasPoint[]): AtlasDensityTile[] {
+  return buildDensityTiles(points, {
+    maxPointsPerTile: 40,
+    tileCount: 8,
+    worldBounds: ATLAS_DEFAULT_WORLD_BOUNDS,
+    z: 2,
+  });
 }
 
 export function createSyntheticAtlasBatch(
@@ -411,7 +319,7 @@ export function createSyntheticAtlasBatch(
   return {
     views,
     points,
-    clusters: summarizeClusters(points, views),
-    densityTiles: summarizeDensityTiles(points, views),
+    clusters: summarizeClusters(points),
+    densityTiles: summarizeDensityTiles(points),
   };
 }

@@ -11,6 +11,13 @@ Types exported from `@catlas/atlas-react`:
 - `AtlasViewportState`, `LayerToggles`
 - `bboxForViewport(viewport)` helper
 
+Runtime contract helpers exported from `@catlas/atlas-react/contract`:
+
+- `validateAtlasContractRows` / `assertAtlasContractRows`
+- `aggregateClusters(points, { worldBounds })`
+- `buildDensityTiles(points, { worldBounds, tileCount, z })`
+- `ATLAS_CONTRACT_GOLDEN_FIXTURES`
+
 LOD layers:
 
 - `density` — low zoom, heatmap/stipple tiles
@@ -144,3 +151,15 @@ Selectors for the map surface:
 - Root: `[data-testid="semantic-atlas-map"]`
 - Canvas: `[data-testid="atlas-canvas"]` or `[data-testid="atlas-map-canvas"]`
 - Overlay labels: `[data-atlas-kind="density-label"]`, `[data-testid="atlas-overlay"]`
+
+## Conformance
+
+Run the non-TypeScript contract path from the repository root:
+
+```bash
+npm run conformance
+```
+
+This builds the package, runs the JavaScript data-prep recipe in
+`examples/atlas-data-prep`, validates golden fixtures, and imports the packed
+tarball from a temporary consumer outside the monorepo.

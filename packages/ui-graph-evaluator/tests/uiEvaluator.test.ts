@@ -99,7 +99,7 @@ describe("generic UI graph evaluator", () => {
     };
 
     expect(packageManifest.bin?.["ui-graph-evaluator"]).toBe(
-      "./dist/run-ui-evaluator.js",
+      "dist/run-ui-evaluator.js",
     );
     expect(packageManifest.exports?.["."]?.import).toBe(
       "./dist/run-ui-evaluator.js",
