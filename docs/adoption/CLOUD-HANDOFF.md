@@ -89,7 +89,7 @@ correctly, and operationally ready.
   app stands in as pilot if §12 selects that).
 - The full adoption **doc spine** and **example set** exist (§4, [maturity plan](../atlas-adoption-maturity-plan.md) §"Required Documentation/Example Set").
 - All three **gate tiers** are green at the levels they support (§7), with reports committed/attached.
-- A copyable **CI workflow** exists (§13) — the repo currently ships **none**.
+- A copyable **CI workflow** exists (§13) — the repo now ships a minimal `conformance + typecheck` gate (#22); §13 extends it with the Tier-A/B atlas gates.
 - The [production checklist](../atlas-production.md) (cache/index/privacy/refresh/scale) is satisfied and linked from M5 evidence.
 - The §11 **evidence pack** is complete and passes the §11 review policy.
 
@@ -506,21 +506,23 @@ skips from ability to promise without a report, query plan, or screenshot.
 
 ---
 
-## 12. Decisions to pin before slices diverge
+## 12. Pinned decisions (defaults — override per pilot owner)
 
-These are unresolved in the source plan and **change M2–M5 scope**. The orchestrator (or a
-human) must answer them up front; record the answers at the top of
-[`COORDINATION.md`](./COORDINATION.md) or in the PR description.
+These were unresolved in the source plan and **shape M2–M5 scope**. They are now pinned with
+repo-grounded defaults (mirrored in [`COORDINATION.md`](./COORDINATION.md) §Pinned adoption
+decisions). A pilot owner may override any of them — if they do, update both places.
 
-1. **Pilot adopter** — which product, owner, and stack goes first (or: the reference app stands in)?
-2. **First scale target** — 170k, 1M, or 10M tier for the M4/M5 scale-budget review?
-3. **Doc policy** — confirm: adoption docs *wrap* canonical docs unless a source-of-truth section is explicitly moved.
-4. **Exported-type contract** — which exported fields need a stability changelog before broader adopter work?
-5. **Coordinate fallback** — what should an adopter do when source data can't map to stable `x/y` or aggregate clusters?
-6. **Promotion authority** — who approves level promotion: self-assessment, peer review, or `catlas-evidence-reviewer`?
-7. **Tool home** — does `catlas-adoption-doctor` live in `@catlas/atlas-benchmarks` or a new package?
-8. **Visual baseline** — is a reference PNG committed, and should `--min-reference-score` be a hard gate (§8.3)?
-9. **Visual test strategy** — fill the `@playwright/test` screenshot specs, or rely on `ui-graph-evaluator` texture/reference scores? Pick one to avoid redundant coverage (§8.1).
+| # | Decision | Pinned default | Rationale |
+|---|----------|----------------|-----------|
+| 1 | **Pilot adopter** | The reference `@catlas/semantic-atlas` app stands in as pilot until a real product is named. | Lets the M2→M5 climb proceed now; swap in a real product/owner/stack when chosen. |
+| 2 | **First scale target** | **1M** (of the 170k / 1M / 10M tiers). | 170k ≈ current local scale; 1M is the first meaningful external target; 10M is the stretch. |
+| 3 | **Doc policy** | Adoption docs **wrap** (link to) canonical docs; copy only short, stable snippets with a source pointer; full sections link. | Matches the maturity plan's stated rule; prevents source-of-truth drift. |
+| 4 | **Exported-type contract** | Start a `CHANGELOG` keyed to `ATLAS_CONTRACT_VERSION` covering the `@catlas/atlas-react` root exports + `/types` shapes (`AtlasPoint/Cluster/DensityTile/View`). | These are the adoption surface; additive optional = minor, signature/field change = major. |
+| 5 | **Coordinate fallback** | Normalize via the coordinate recipe (CONTRACT §3, aspect ≲ 0.72). If data truly can't map to stable x/y or aggregate clusters, **stop at M1.5 feasibility** and revisit the view projection — don't force it. | Keeps default framing; avoids fabricating coordinates. |
+| 6 | **Promotion authority** | **Peer review** now; the `catlas-evidence-reviewer` playbook once it exists. | Matches §7/§11's review policy; no self-promotion. |
+| 7 | **Tool home** | Start `catlas-*` tools **inside `@catlas/atlas-benchmarks`**; extract to a package only if Phase 4 shows real demand. | Avoids premature package proliferation. |
+| 8 | **Visual baseline** | **No reference PNG is committed** (verified). Keep `--min-reference-score` **advisory**, not a hard gate; texture/occupancy stay the hard visual gate until a baseline is committed. | The READMEs reference placeholder paths only; a hard gate without a committed baseline isn't reproducible. |
+| 9 | **Visual test strategy** | Rely on `ui-graph-evaluator` texture/reference scores + Claude-in-Chrome screenshots (§8.2); **defer** filling the empty `@playwright/test` stubs. | Avoids redundant coverage; revisit if a pixel-diff baseline is needed. |
 
 ---
 
@@ -528,7 +530,7 @@ human) must answer them up front; record the answers at the top of
 
 **M5 acceptance — the handoff is "done" when every box is checked:**
 
-- [ ] §12 decisions recorded.
+- [x] §12 decisions pinned with defaults (§12) and mirrored in [`COORDINATION.md`](./COORDINATION.md).
 - [x] Wave 1 slices merged (#11 Devin · #14 Claude Code · #15 Cursor · `80b92ad`+`atlas-data-prep` Codex) — **verify each slice's §5.2 "Done when"**; then Wave 2 hand-offs; reconcile [`COORDINATION.md`](./COORDINATION.md) §Status (currently lags the merges).
 - [ ] Contract untouched (or version bumped + all owners notified).
 - [ ] Doc spine + example set exist; every copyable command resolves (Devin's reconciliation done).
@@ -539,7 +541,8 @@ human) must answer them up front; record the answers at the top of
 - [ ] [`atlas-production.md`](../atlas-production.md) checklist satisfied and linked.
 - [ ] CI workflow below committed and passing.
 
-**Copyable CI skeleton** — the repo currently has **no `.github/workflows`**. Land this as
+**Copyable CI skeleton** — the repo now has a minimal `.github/workflows/ci.yml` (conformance +
+typecheck, #22). Extend it, or add the sibling below as
 `examples/atlas-benchmark-ci/.github/workflows/atlas-gates.yml` (Tier A by default; Tier B
 documented as reference-shell-only):
 
