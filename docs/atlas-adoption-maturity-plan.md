@@ -120,6 +120,8 @@ New tools to consider after docs are in place:
 
 ## Contract Stability
 
+Canonical contract: [`docs/adoption/CONTRACT.md`](adoption/CONTRACT.md) (`ATLAS_CONTRACT_VERSION`). This section summarizes the plan-level contract scope.
+
 The public exports from `@catlas/atlas-react` plus the data-shape exports from `@catlas/atlas-react/types` are the adoption contract. Root exports include the component, component props, viewport state, layer toggles, and helpers such as `bboxForViewport`; the `/types` subpath covers atlas data shapes such as `AtlasPoint`, `AtlasCluster`, `AtlasDensityTile`, and `AtlasView`. Adoption docs must show the correct import path for each symbol.
 
 Breaking changes to exported adoption types, component props, viewport behavior, and data shapes require an explicit breaking-change note and, after package publication policy is defined, a major version bump. Additive optional fields are non-breaking when existing adopters can ignore them safely.
@@ -250,7 +252,7 @@ M5 is the final maturity level. It does not require all production concerns to b
 - Pick the first external scale target from the existing 170k, 1M, and 10M tiers.
 - Decide the documentation policy: adoption docs wrap canonical docs unless a source-of-truth section is explicitly moved.
 - Record the contract-stability policy for exported renderer types before asking adopters to depend on them.
-- Restore or remove ghost `validate:atlas` references.
+- ~~Restore or remove ghost `validate:atlas` references.~~ Done — root script added.
 - Fix `atlas-analyze-queries.ts` SQL path drift.
 - Canonicalize report paths per tool.
 - Add the `docs/adoption/index.md` decision tree skeleton before expanding the rest of the adoption-doc spine.
@@ -350,7 +352,7 @@ Adoption claims should be reviewed against benchmark finding IDs, not abstract p
 
 Key finding-id categories that gate maturity claims:
 
-| Maturity | Required finding IDs (pass, not skip) |
+| Maturity | Required finding IDs (pass or acceptable warn; not skip) |
 | --- | --- |
 | M1 | `renderer-point-elements`, `runtime-test-hook` |
 | M2 | `client-no-db-import`, `lod-thresholds-centralized`, `points-bbox-validation`, `points-no-bulk-metadata` (minimum subset; full source-invariant list required at M4) |
