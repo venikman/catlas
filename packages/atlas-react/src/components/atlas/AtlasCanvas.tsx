@@ -989,8 +989,12 @@ export function AtlasCanvas({
   );
   const mapAriaLabel = useMemo(() => {
     const count = renderedCount ?? points.length;
-    return `Semantic atlas map. ${count} points rendered. Use arrow keys to pan and plus or minus to zoom.`;
-  }, [points.length, renderedCount]);
+    const clustersReachable = lod !== "points" && clusters.length > 0;
+    const clusterHint = clustersReachable
+      ? " Press Tab to reach clusters, then arrow keys to move between them, Enter to select, and Escape to return."
+      : "";
+    return `Semantic atlas map. ${count} points rendered. Use arrow keys to pan and plus or minus to zoom.${clusterHint}`;
+  }, [clusters.length, lod, points.length, renderedCount]);
   const pixelWorld = Math.max(spanX / 980, spanY / 720);
   const densityRegions = useMemo(
     () => buildDensityRegions(densitySamples, pixelWorld),

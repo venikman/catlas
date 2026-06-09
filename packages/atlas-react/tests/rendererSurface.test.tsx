@@ -366,4 +366,31 @@ describe("renderer adoption surface", () => {
     fireEvent.keyDown(engineering, { key: "Escape" });
     expect(document.activeElement).toBe(screen.getByRole("application"));
   });
+
+  it("announces cluster keyboard reachability in the surface label", () => {
+    const { rerender } = render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        status="ready"
+      />,
+    );
+    expect(screen.getByRole("application")).toHaveAccessibleName(
+      /Press Tab to reach clusters/,
+    );
+
+    // No hint when there are no clusters to reach.
+    rerender(
+      <SemanticAtlasMap
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        points={[samplePoint]}
+        status="ready"
+      />,
+    );
+    expect(screen.getByRole("application")).not.toHaveAccessibleName(
+      /Press Tab to reach clusters/,
+    );
+  });
 });
