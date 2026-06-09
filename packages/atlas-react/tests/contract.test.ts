@@ -136,6 +136,29 @@ describe("atlas contract runtime", () => {
     expect(clusters.map((cluster) => cluster.pointCount)).toEqual([1, 1]);
   });
 
+  it("aggregates large clusters without spreading coordinates into Math.min/max", () => {
+    const points: AtlasPoint[] = Array.from({ length: 70_000 }, (_, index) => ({
+      clusterId: "large",
+      colorKey: "#2563eb",
+      entityId: `large-${index}`,
+      entityType: "document",
+      importance: 0.5,
+      label: `Large ${index}`,
+      viewId: "large-view",
+      x: index / 70_000,
+      y: 1 - index / 70_000,
+    }));
+
+    const clusters = aggregateClusters(points, {
+      worldBounds: ATLAS_UNIT_WORLD_BOUNDS,
+    });
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].pointCount).toBe(70_000);
+    expect(clusters[0].boundsMinX).toBe(0);
+    expect(clusters[0].boundsMaxY).toBe(1);
+  });
+
   it("builds density tiles with explicit worldBounds, tileCount, and z", () => {
     const [firstPoint] = ATLAS_CONTRACT_GOLDEN_FIXTURES.unitWorld.points;
     const tiles = buildDensityTiles([firstPoint], {

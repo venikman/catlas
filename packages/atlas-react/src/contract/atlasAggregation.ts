@@ -42,10 +42,6 @@ function rounded(value: number, digits = 5): number {
   return Number(value.toFixed(digits));
 }
 
-function average(values: number[]): number {
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
 function viewIdFor(point: AtlasPoint, fallback?: string): string {
   return point.viewId ?? fallback ?? DEFAULT_VIEW_ID;
 }
@@ -128,12 +124,22 @@ export function aggregateClusters(
       const viewId = viewIdFor(first, options.viewId);
       const viewSlug = viewSlugFor(first, options.viewSlug);
       const clusterId = first.clusterId;
-      const xs = clusterPoints.map((point) => point.x);
-      const ys = clusterPoints.map((point) => point.y);
-      const boundsMinX = Math.min(...xs);
-      const boundsMaxX = Math.max(...xs);
-      const boundsMinY = Math.min(...ys);
-      const boundsMaxY = Math.max(...ys);
+      let boundsMinX = first.x;
+      let boundsMaxX = first.x;
+      let boundsMinY = first.y;
+      let boundsMaxY = first.y;
+      let sumX = 0;
+      let sumY = 0;
+      let sumImportance = 0;
+      for (const point of clusterPoints) {
+        boundsMinX = Math.min(boundsMinX, point.x);
+        boundsMaxX = Math.max(boundsMaxX, point.x);
+        boundsMinY = Math.min(boundsMinY, point.y);
+        boundsMaxY = Math.max(boundsMaxY, point.y);
+        sumX += point.x;
+        sumY += point.y;
+        sumImportance += point.importance;
+      }
       const radius = Math.max(
         Math.max(boundsMaxX - boundsMinX, boundsMaxY - boundsMinY) / 2,
         minRadius,
@@ -145,18 +151,15 @@ export function aggregateClusters(
         boundsMaxY: rounded(boundsMaxY),
         boundsMinX: rounded(boundsMinX),
         boundsMinY: rounded(boundsMinY),
-        centroidX: rounded(average(xs)),
-        centroidY: rounded(average(ys)),
+        centroidX: rounded(sumX / clusterPoints.length),
+        centroidY: rounded(sumY / clusterPoints.length),
         clusterId,
         colorKey:
           options.colorKeyForCluster?.(clusterId, clusterPoints) ??
           first.colorKey ??
           DEFAULT_COLOR_KEY,
         id: `${viewId}-${clusterId}-lod-${lodLevel}`,
-        importance: rounded(
-          average(clusterPoints.map((point) => point.importance)),
-          4,
-        ),
+        importance: rounded(sumImportance / clusterPoints.length, 4),
         label:
           options.labelForCluster?.(clusterId, clusterPoints) ??
           labelFromClusterId(clusterId),
