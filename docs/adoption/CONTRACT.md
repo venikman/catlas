@@ -13,8 +13,8 @@ Pin against the version above; it bumps on any breaking change below.
 | # | Decision | Consequence |
 |---|----------|-------------|
 | D1 | **Access control is upstream.** The atlas layer assumes the caller is already authorized by the host app. We do **not** bake auth into the atlas routes. | P1 reframes from "add auth" to "adopters control which fields cross the boundary + bound the search." `sec-1`/`sec-2` are handled by the store/serving layer, not an auth gate. |
-| D2 | **Data access is modular.** Adopters implement the `AtlasStore` interface against their own database. The reference app ships Postgres + demo stores. | `AtlasStore` is the central adoption artifact — "the place for adopters to put in." Reference query functions move behind it. |
-| D3 | **HTTP serving is a recommendation, not a mandate.** Call the store functions directly, or wrap a store in the recommended `createAtlasRoutes({ store })`. | The reference routes become one flexible option; the store is the contract, transport is the adopter's choice. |
+| D2 | **Data access is modular.** Adopters implement the `AtlasStore` interface against their own database. The reference app ships a single `referenceAtlasStore` with Postgres and demo data modes. | `AtlasStore` is the central adoption artifact — "the place for adopters to put in." Reference query functions move behind it. |
+| D3 | **HTTP serving is a recommendation, not a mandate.** Call the store directly (the reference routes read through `getAtlasStore()`), or — once it ships — wrap a store in the proposed `createAtlasRoutes({ store })` helper. | The reference routes are one flexible option; the store is the contract, transport is the adopter's choice. `createAtlasRoutes` is the documented next-step helper, not yet implemented. |
 
 ## 1. The store interface (the modular boundary)
 

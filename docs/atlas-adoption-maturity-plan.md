@@ -21,7 +21,7 @@ These three decisions are canonical in [`docs/adoption/CONTRACT.md`](adoption/CO
 
 - **D1 — access control is upstream.** The atlas layer assumes the caller is already authorized by the host app. P1 is therefore not "add auth"; it is "control which fields cross the boundary (`sec-1`) and bound the search (`sec-2`)."
 - **D2 — data access is modular.** Adopters implement the `AtlasStore` interface (7 methods) against their own database; the reference app ships Postgres + demo stores. `AtlasStore` is the central adoption artifact.
-- **D3 — HTTP serving is a recommendation.** Adopters may call the store directly or wrap it in `createAtlasRoutes({ store })`. The reference routes are one option, not a mandate.
+- **D3 — HTTP serving is a recommendation.** Adopters may call the store directly (the reference routes read through `getAtlasStore()`) or — once it ships — wrap it in the proposed `createAtlasRoutes({ store })` helper. The reference routes are one option, not a mandate.
 
 Changing any of these is a contract change → bump `ATLAS_CONTRACT_VERSION` and notify the slice owners.
 
@@ -32,7 +32,7 @@ M0 and M1 are **baseline-done**: the repo already runs the demo and renders shap
 | Level | Name | Promise | Required evidence (what the adopter shows) |
 | --- | --- | --- | --- |
 | M0 | Demo baseline — **baseline-done** | Synthetic data demonstrates the concept. | Inherited: the reference app runs in demo mode and demo-profile benchmarks pass or report explicit skips. No adopter action. |
-| M1 | Package adoption — **baseline-done** | Another React app renders shaped atlas data without importing app code. | Inherited and proven by `examples/atlas-consumer`. An adopter confirms it by running the M1 sequence below; the Tier A gate passes `renderer-point-elements` and `runtime-test-hook`. |
+| M1 | Package adoption — **baseline-done** | Another React app renders shaped atlas data without importing app code. | Inherited and proven by `examples/atlas-consumer`. An adopter confirms it by running the M1 sequence below for a visible render and a passing Tier A gate; the source-invariant validator (`npm run bench:atlas:quick`) reports `renderer-point-elements` and `runtime-test-hook` as pass. |
 | M1.5 | Data-shape feasibility | A team can test whether product data makes sense as an atlas before investing in Postgres prep. | About 100 product rows mapped into a local JSON fixture, rendered through `examples/atlas-consumer` or an equivalent host, plus a screenshot or evaluator artifact. |
 | M2 | Real-data local adapter | A product maps its own source records into atlas views, points, clusters, density, and entity payloads via the `AtlasStore` interface (D2). | A coordinate recipe that yields in-bounds rows (`examples/atlas-data-prep/coordinate-recipe.mjs` as the template) passing `npm run conformance`; an `AtlasStore` implementation; bounded API/DB responses passing `client-no-db-import`, `lod-thresholds-centralized`, `points-bbox-validation`, `points-no-bulk-metadata`; `EXPLAIN ANALYZE` samples for DB-backed paths. |
 | M3 | Product-styled integration | Product teams style data colors and host chrome around the atlas without forking renderer internals. | Data `colorKey` mapping, host `className`/`style` or shell-token examples, the selector registry below, visual audit screenshots or evaluator artifacts; `visual-config-centralized` passes and `render-browser-console-warnings` is pass/warn. |
@@ -86,7 +86,7 @@ The minimum skill kit leads. Documentation and examples support what the skills 
 - Link the adoption docs from the root README and package READMEs.
 - Make adoption docs extend `packages/atlas-react/docs/backend-integration.md` (canonical for types, schema, API shape, adapter pattern, seeding, selectors) instead of duplicating it.
 - Add a benchmark-to-maturity map labeling each check by the minimum maturity level it supports.
-- Document current default report paths per tool: atlas benchmarks write `benchmarks/results/latest.json` / `latest.md`; clickable audit writes its clickable-audit report; the UI evaluator writes `benchmarks/results/ui-evaluator-latest.json`. Reconcile any stale path references.
+- Document current default report paths per tool: atlas benchmarks write `outputs/atlas-benchmarks/latest.json` / `latest.md`; clickable audit writes its clickable-audit report under `outputs/atlas-benchmarks/`; the UI evaluator writes `benchmarks/results/ui-evaluator-latest.json`. Reconcile any stale path references.
 
 **Done when:** an adopter can pick the correct doc for package adoption, Postgres prep, styling, benchmarking, or evidence review within 60 s, and no doc claims production readiness without naming the required finding IDs.
 

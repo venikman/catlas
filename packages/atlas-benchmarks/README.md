@@ -4,7 +4,7 @@ This directory contains the local benchmark validator for the Semantic Atlas pro
 
 The benchmark runner reports measured results and PASS/WARN/FAIL/SKIP checks. Gate-blocking checks are correctness and architecture failures only. Machine-dependent latency and payload-size targets are reported as warnings unless a hard safety cap is violated.
 
-Budgets live in `benchmarks/budgets.ts` as `ATLAS_BUDGETS`, with both `good` and stricter `sota` thresholds for the Semantic Atlas scorecard.
+Budgets live in `src/budgets.ts` as `ATLAS_BUDGETS`, with both `good` and stricter `sota` thresholds for the Semantic Atlas scorecard.
 
 ## Commands
 
@@ -14,7 +14,7 @@ npm run bench:atlas
 npm run bench:atlas:full
 npm run bench:atlas:clickable
 npm run bench:ui -- --url=http://localhost:3002
-npm run build:ui-evaluator
+npm run build:packages
 npm run validate:atlas
 ```
 
@@ -62,8 +62,8 @@ npm run bench:ui -- \
 Run the built CLI help for the portable contract:
 
 ```bash
-npm run build:ui-evaluator
-./dist/ui-evaluator/benchmarks/run-ui-evaluator.js --help
+npm run build:packages
+node packages/ui-graph-evaluator/dist/run-ui-evaluator.js --help
 ```
 
 For visual evidence, add `--artifacts` to write `before.png` and `after.png`, or `--record-video` to also write `interaction.webm`:
@@ -107,10 +107,10 @@ Reference-score misses are warnings by default. Add `--strict-reference` to make
 
 If Playwright's bundled browser is not installed, pass `--browser-executable=/path/to/chrome` or set `UI_EVAL_BROWSER_EXECUTABLE`. On macOS, the evaluator also tries `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`.
 
-For package-style use, run `npm run build:ui-evaluator` and execute:
+For package-style use, run `npm run build:packages` and execute:
 
 ```bash
-./dist/ui-evaluator/benchmarks/run-ui-evaluator.js \
+node packages/ui-graph-evaluator/dist/run-ui-evaluator.js \
   --url=http://localhost:4173 \
   --root-selector='[data-testid="graph-root"]' \
   --graph-selector='canvas, svg' \
@@ -145,12 +145,12 @@ npm run bench:atlas:quick -- --start-server --server=start
 
 ## Reports
 
-The runner writes:
+The benchmark runner (`bench:atlas:*`) writes:
 
-- `benchmarks/results/latest.json`
-- `benchmarks/results/latest.md`
+- `outputs/atlas-benchmarks/latest.json`
+- `outputs/atlas-benchmarks/latest.md`
 
-Generated reports are ignored by git. Keep `benchmarks/results/.gitkeep`.
+The portable UI graph evaluator (`bench:ui`) writes `benchmarks/results/ui-evaluator-latest.json` separately. Generated reports under `outputs/` and `benchmarks/results/` are ignored by git.
 
 Both reports include hard failures, SOTA misses, warnings/skips, recommended next actions, and raw result rows.
 
