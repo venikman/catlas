@@ -57,6 +57,16 @@ function labelFromClusterId(clusterId: string): string {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function atlasStableId(prefix: string, parts: Array<number | string>): string {
+  return [
+    prefix,
+    ...parts.map((part) => {
+      const value = String(part);
+      return `${value.length}:${value}`;
+    }),
+  ].join("|");
+}
+
 function assertPositiveInteger(value: number, name: string): number {
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`${name} must be a positive integer.`);
@@ -178,7 +188,7 @@ export function aggregateClusters(
           options.colorKeyForCluster?.(clusterId, clusterPoints) ??
           first.colorKey ??
           DEFAULT_COLOR_KEY,
-        id: `${viewId}-${clusterId}-lod-${lodLevel}`,
+        id: atlasStableId("cluster", [viewId, clusterId, lodLevel]),
         importance: rounded(sumImportance / clusterPoints.length, 4),
         label:
           options.labelForCluster?.(clusterId, clusterPoints) ??
@@ -257,7 +267,13 @@ export function buildDensityTiles(
         label: labelFromClusterId(point.clusterId),
         points: [densityPoint],
       },
-      id: `${viewId}-tile-${z}-${xTile}-${yTile}-${point.clusterId}`,
+      id: atlasStableId("density", [
+        viewId,
+        z,
+        xTile,
+        yTile,
+        point.clusterId,
+      ]),
       pointCount: 1,
       viewId,
       viewSlug,

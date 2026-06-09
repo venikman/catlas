@@ -136,6 +136,40 @@ describe("atlas contract runtime", () => {
     expect(clusters.map((cluster) => cluster.pointCount)).toEqual([1, 1]);
   });
 
+  it("generates collision-free cluster ids when source ids contain separators", () => {
+    const points: AtlasPoint[] = [
+      {
+        clusterId: "c",
+        colorKey: "#2563eb",
+        entityId: "first",
+        entityType: "document",
+        importance: 0.6,
+        label: "First",
+        viewId: "a-b",
+        x: 0.1,
+        y: 0.2,
+      },
+      {
+        clusterId: "b-c",
+        colorKey: "#059669",
+        entityId: "second",
+        entityType: "document",
+        importance: 0.8,
+        label: "Second",
+        viewId: "a",
+        x: 0.3,
+        y: 0.4,
+      },
+    ];
+
+    const clusters = aggregateClusters(points, {
+      worldBounds: ATLAS_UNIT_WORLD_BOUNDS,
+    });
+
+    expect(clusters).toHaveLength(2);
+    expect(new Set(clusters.map((cluster) => cluster.id)).size).toBe(2);
+  });
+
   it("rejects aggregate points outside the configured worldBounds", () => {
     expect(() =>
       aggregateClusters(
