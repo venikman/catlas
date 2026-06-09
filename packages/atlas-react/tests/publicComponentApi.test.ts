@@ -17,6 +17,7 @@ describe("public atlas component api", () => {
     expect(component).toContain("export type SemanticAtlasMapProps");
     expect(component).toContain("bboxForViewport");
     expect(barrel).toContain("SemanticAtlasMap");
+    expect(barrel).toContain("ATLAS_SELECTORS");
     expect(barrel).not.toContain("AtlasViewer");
     expect(component).not.toContain("fetchAtlasViews");
     expect(component).not.toContain("useQuery");

@@ -118,6 +118,23 @@ export const ATLAS_VISUAL_CONFIG = {
   },
 } as const;
 
+export type AtlasThemePalette = Partial<{
+  [Key in keyof typeof ATLAS_VISUAL_CONFIG.palette]: string;
+}>;
+
+export type AtlasPalette = {
+  [Key in keyof typeof ATLAS_VISUAL_CONFIG.palette]: string;
+};
+
+export function resolveAtlasPalette(
+  overrides?: AtlasThemePalette,
+): AtlasPalette {
+  if (!overrides) {
+    return { ...ATLAS_VISUAL_CONFIG.palette };
+  }
+  return { ...ATLAS_VISUAL_CONFIG.palette, ...overrides };
+}
+
 export type LodBlend = {
   clusters: number;
   density: number;

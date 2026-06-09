@@ -7,10 +7,15 @@ import {
   useState,
   type CSSProperties,
   type Dispatch,
+  type KeyboardEvent,
   type PointerEvent,
   type SetStateAction,
   type WheelEvent,
 } from "react";
+import {
+  ATLAS_DEFAULT_WORLD_BOUNDS,
+  type AtlasWorldBounds,
+} from "../../contract/atlasStore";
 import {
   densityTilesToSamples,
   type DensitySample,
@@ -28,6 +33,7 @@ import type {
 import {
   ATLAS_VISUAL_CONFIG,
   clampAtlasZoom,
+  type AtlasPalette,
   getClusterVisualStyle,
   getContourVisualStyle,
   getDensityVisualStyle,
@@ -38,6 +44,7 @@ import {
   selectDensityLabels,
 } from "../../lib/atlas/visualConfig";
 import type { AtlasViewportState, LayerToggles } from "./atlasComponentTypes";
+import { viewSpanForWorldBounds } from "./viewportBounds";
 
 type AtlasTargetMarker = {
   id: string;
@@ -57,11 +64,14 @@ type AtlasCanvasProps = {
   onHoverPoint: (point: AtlasPoint | null) => void;
   onSelectCluster: (cluster: AtlasCluster) => void;
   onSelectPoint: (point: AtlasPoint) => void;
+  palette?: AtlasPalette;
   points: AtlasPoint[];
+  renderedCount?: number;
   selectedEntityId: string | null;
   setViewport: Dispatch<SetStateAction<AtlasViewportState>>;
   targetMarker: AtlasTargetMarker | null;
   viewport: AtlasViewportState;
+  worldBounds?: AtlasWorldBounds;
 };
 
 type AtlasContourPath = {
@@ -129,8 +139,7 @@ type CanvasTransform = {
   scale: number;
 };
 
-const CANVAS_ROOT_STYLE: CSSProperties = {
-  background: ATLAS_VISUAL_CONFIG.palette.paper,
+const CANVAS_ROOT_BASE_STYLE: CSSProperties = {
   inset: 0,
   overflow: "hidden",
   position: "absolute",
@@ -277,11 +286,6 @@ function drawTextureDot(
   context.beginPath();
   context.arc(x, y, radius, 0, Math.PI * 2);
   context.fill();
-}
-
-function viewSpanForZoom(zoom: number): { spanX: number; spanY: number } {
-  const nextSpanX = 15 / Math.pow(1.32, zoom);
-  return { spanX: nextSpanX, spanY: nextSpanX * 0.72 };
 }
 
 function buildBlobPath(input: {
@@ -931,11 +935,14 @@ export function AtlasCanvas({
   onHoverPoint,
   onSelectCluster,
   onSelectPoint,
+  palette = ATLAS_VISUAL_CONFIG.palette,
   points,
+  renderedCount,
   selectedEntityId,
   setViewport,
   targetMarker,
   viewport,
+  worldBounds = ATLAS_DEFAULT_WORLD_BOUNDS,
 }: AtlasCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -951,6 +958,20 @@ export function AtlasCanvas({
 
   const spanX = bbox.maxX - bbox.minX;
   const spanY = bbox.maxY - bbox.minY;
+  const rootStyle = useMemo<CSSProperties>(
+    () => ({
+      ...CANVAS_ROOT_BASE_STYLE,
+      background: palette.paper,
+    }),
+    [palette.paper],
+  );
+  const mapAriaLabel = useMemo(() => {
+    const countLabel =
+      renderedCount != null
+        ? `${renderedCount} points rendered`
+        : `${points.length} points in view`;
+    return `Semantic atlas map. ${countLabel}. Use arrow keys to pan and plus or minus to zoom.`;
+  }, [points.length, renderedCount]);
   const pixelWorld = Math.max(spanX / 980, spanY / 720);
   const densityRegions = useMemo(
     () => buildDensityRegions(densitySamples, pixelWorld),
@@ -1283,7 +1304,7 @@ export function AtlasCanvas({
           x: pointerX,
           y: pointerY,
         });
-        const nextSpan = viewSpanForZoom(nextZoom);
+        const nextSpan = viewSpanForWorldBounds(nextZoom, worldBounds);
         const nextTransform = canvasTransform(
           { height: rect.height, width: rect.width },
           nextSpan.spanX,
@@ -1366,11 +1387,60 @@ export function AtlasCanvas({
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const panKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"] as const;
+    const isPan = panKeys.includes(event.key as (typeof panKeys)[number]);
+    const isZoomIn = event.key === "+" || event.key === "=";
+    const isZoomOut = event.key === "-";
+
+    if (!isPan && !isZoomIn && !isZoomOut) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isPan) {
+      const panStepX = spanX * 0.08;
+      const panStepY = spanY * 0.08;
+      setViewport((current) => ({
+        ...current,
+        centerX: Number(
+          (
+            current.centerX +
+            (event.key === "ArrowRight"
+              ? panStepX
+              : event.key === "ArrowLeft"
+                ? -panStepX
+                : 0)
+          ).toFixed(4),
+        ),
+        centerY: Number(
+          (
+            current.centerY +
+            (event.key === "ArrowDown"
+              ? panStepY
+              : event.key === "ArrowUp"
+                ? -panStepY
+                : 0)
+          ).toFixed(4),
+        ),
+      }));
+      return;
+    }
+
+    setViewport((current) => ({
+      ...current,
+      zoom: clampAtlasZoom(current.zoom + (isZoomIn ? 0.35 : -0.35)),
+    }));
+  }
+
   return (
     <div
       ref={containerRef}
+      aria-label={mapAriaLabel}
       className="absolute inset-0 overflow-hidden bg-[#efefec]"
       data-testid="atlas-canvas"
+      onKeyDown={handleKeyDown}
       onPointerCancel={handlePointerUp}
       onPointerDown={handlePointerDown}
       onPointerLeave={() => {
@@ -1379,7 +1449,9 @@ export function AtlasCanvas({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onWheel={handleWheel}
-      style={CANVAS_ROOT_STYLE}
+      role="application"
+      style={rootStyle}
+      tabIndex={0}
     >
       <div
         className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.62),transparent_42%)]"
@@ -1397,7 +1469,7 @@ export function AtlasCanvas({
         style={CANVAS_TEXTURE_STYLE}
       />
       <svg
-        aria-label="Semantic atlas map"
+        aria-hidden="true"
         className="absolute inset-0 z-[3] h-full w-full cursor-grab touch-none active:cursor-grabbing"
         data-testid="atlas-overlay"
         preserveAspectRatio="xMidYMid slice"
@@ -1527,8 +1599,14 @@ export function AtlasCanvas({
               return (
                 <g
                   key={cluster.id}
+                  aria-label={
+                    cluster.label
+                      ? `Cluster: ${cluster.label}`
+                      : `Cluster ${cluster.clusterId}`
+                  }
                   data-atlas-cluster-id={cluster.clusterId}
                   data-atlas-kind="cluster"
+                  role="img"
                   onClick={(event) => {
                     event.stopPropagation();
                     onSelectCluster(cluster);
@@ -1583,12 +1661,18 @@ export function AtlasCanvas({
               return (
                 <circle
                   key={`${cluster.id}-hit`}
+                  aria-label={
+                    cluster.label
+                      ? `Select cluster: ${cluster.label}`
+                      : `Select cluster ${cluster.clusterId}`
+                  }
                   cx={cluster.centroidX}
                   cy={cluster.centroidY}
                   data-atlas-cluster-id={cluster.clusterId}
                   data-atlas-kind="cluster-hit"
                   fill="rgba(15, 23, 42, 0.001)"
                   pointerEvents="all"
+                  role="button"
                   r={style.radius}
                   stroke="transparent"
                   onClick={(event) => {
@@ -1656,7 +1740,7 @@ export function AtlasCanvas({
                 fontSize={densityLabelSize}
                 fontWeight={650}
                 paintOrder="stroke"
-                stroke={ATLAS_VISUAL_CONFIG.palette.labelHalo}
+                stroke={palette.labelHalo}
                 strokeWidth={densityLabelSize * 0.18}
                 textAnchor="middle"
                 x={label.x}
@@ -1688,7 +1772,7 @@ export function AtlasCanvas({
                 fontSize={clusterLabelSize}
                 fontWeight={650}
                 paintOrder="stroke"
-                stroke={ATLAS_VISUAL_CONFIG.palette.labelHalo}
+                stroke={palette.labelHalo}
                 strokeWidth={clusterLabelSize * 0.18}
                 textAnchor="middle"
                 x={cluster.centroidX}
