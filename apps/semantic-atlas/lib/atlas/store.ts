@@ -33,6 +33,7 @@ export const referenceAtlasStore: AtlasStore = {
   listDensityTiles: listAtlasDensityTiles,
   getEntity: getAtlasEntity,
   search: searchAtlas,
+  isAvailable: () => getAtlasSourceMode() !== "unavailable",
 };
 
 /**
@@ -45,11 +46,12 @@ export function getAtlasStore(): AtlasStore {
 }
 
 /**
- * Whether the active store can serve requests. For the reference store this maps to
- * `getAtlasSourceMode()` (postgres or demo); an adopter who swaps `getAtlasStore()` owns
- * this too — return `true` if your store is always reachable. Keeps the routes decoupled
- * from `db.ts` so a custom store isn't gated by the reference `DATABASE_URL` (Codex #14 P1).
+ * Whether the active store can serve requests. Delegates to the store's optional
+ * `isAvailable()` and **defaults to `true`** when a store doesn't implement it — so an
+ * adopter who swaps only `getAtlasStore()` to an always-on database is never gated by the
+ * reference `DATABASE_URL`. The reference store maps it to `getAtlasSourceMode()`
+ * (postgres/demo) so the reference app still 503s cleanly with no DB (Codex #14 P1).
  */
 export function isAtlasStoreAvailable(): boolean {
-  return getAtlasSourceMode() !== "unavailable";
+  return getAtlasStore().isAvailable?.() ?? true;
 }

@@ -1,6 +1,6 @@
 # Catlas Adoption Contract — PINNED
 
-**Status:** Pinned (Wave 0) · **Version:** `ATLAS_CONTRACT_VERSION = 0.1.0` · **Date:** 2026-06-08
+**Status:** Pinned (Wave 0) · **Version:** `ATLAS_CONTRACT_VERSION = 0.2.0` · **Date:** 2026-06-08
 
 This is the canonical, shared contract every adopter implements and every catlas
 implementation slice (Claude Code / Codex / Cursor / Devin) codes against. The
@@ -18,8 +18,8 @@ Pin against the version above; it bumps on any breaking change below.
 
 ## 1. The store interface (the modular boundary)
 
-Implement these 7 methods for your database. Grounded in the existing reference
-functions in `apps/semantic-atlas/lib/atlas/db.ts`.
+Implement these 7 methods for your database (plus one optional `isAvailable`). Grounded in
+the existing reference functions in `apps/semantic-atlas/lib/atlas/db.ts`.
 
 | Method | In | Out | Notes |
 |--------|----|----|-------|
@@ -30,6 +30,7 @@ functions in `apps/semantic-atlas/lib/atlas/db.ts`.
 | `listDensityTiles(q)` | `{view, bbox, limit?}` | `AtlasDensityTile[]` | low-zoom aggregates |
 | `getEntity(id)` | `string` | `AtlasEntityDetails \| null` | **adopter controls exposed fields** |
 | `search(q)` | `{view, q, limit?}` | `AtlasSearchResult[]` | **must bound scan + count** |
+| `isAvailable?()` | — | `boolean` | optional readiness; routes 503 when false, **defaults to available** if omitted |
 
 ## 2. Data shapes
 
@@ -145,6 +146,11 @@ throttling stays the host app's job (D1).
   method signature; changing an `ATLAS_SELECTORS` value or the `AtlasWorldBounds` semantics.
 - The reference `/api/atlas/*` route shapes are **illustrative, not contractual** — adopters
   own their transport (D3). The contract surface is the types + `AtlasStore` + selectors.
+
+**Changelog**
+- **0.2.0** — added optional `AtlasStore.isAvailable?(): boolean` (non-breaking). The recommended
+  routes read readiness from the active store via `isAtlasStoreAvailable()`, which defaults to
+  `true` when a store omits it — so swapping only `getAtlasStore()` is enough.
 
 ---
 

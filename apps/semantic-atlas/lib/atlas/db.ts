@@ -375,6 +375,7 @@ export async function searchAtlas(input: {
         join atlas_views v on v.id = p.view_id
         where v.slug = $1
           and (p.label ilike '%' || $2 || '%' or p.cluster_id ilike '%' || $2 || '%')
+        order by p.importance desc
         limit $4
       )
       select
