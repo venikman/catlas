@@ -60,7 +60,11 @@ Changing any of these is a contract change → bump the version, notify all owne
 
 - **Wave 0 — pin the contract** (this commit). Serial. ✅ *pending sign-off*
 - **Wave 1 — all four in parallel** against the pinned contract, disjoint working sets above.
-- **Wave 2 — two hand-offs:** Codex P5 needs Devin's build hook; Claude Code skills + the "educational" benchmark content need Codex's real M2 mapping + Devin's doc links.
+- **Wave 2 — two hand-offs only:**
+  - Codex's pack smoke test waits on Devin's `prepublishOnly` build hook.
+  - Claude Code's skills + the "educational" benchmark wording wait on Codex's real M2 mapping (a concrete dataset to validate against) + Devin's doc links to point fix → doc.
+
+Everything else finishes in Wave 1.
 
 ## Shared-file owners (avoid collisions)
 
