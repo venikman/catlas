@@ -1,6 +1,6 @@
 -- Semantic Atlas benchmark query-plan inspection.
 -- Usage:
---   psql "$DATABASE_URL" -f benchmarks/sql/explain-atlas-queries.sql
+--   psql "$DATABASE_URL" -f packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql
 --
 -- Tune these values for the viewport or search case under investigation.
 -- The projections mirror the current API hot paths: bulk point/cluster/search

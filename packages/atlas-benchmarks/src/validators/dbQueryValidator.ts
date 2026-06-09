@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { ATLAS_BUDGETS, BUDGETS } from "../budgets";
 import { appRoot, monorepoRoot } from "../monorepoPaths.js";
@@ -313,13 +314,18 @@ export async function dbQueryValidator(
 ): Promise<ValidatorResult> {
   const results: CheckResult[] = [];
   const app = appRoot();
+  const packageRoot = fileURLToPath(new URL("../../", import.meta.url));
   const migration001 = join(app, "migrations/001_create_atlas_schema.sql");
   const migration002 = join(app, "migrations/002_optional_postgis.sql");
   const migration003 = join(app, "migrations/003_harden_atlas_indexes.sql");
-  const explainSql = join(
+  const monorepoExplainSql = join(
     monorepoRoot(),
     "packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql",
   );
+  const packageExplainSql = join(packageRoot, "src/sql/explain-atlas-queries.sql");
+  const explainSql = existsSync(monorepoExplainSql)
+    ? monorepoExplainSql
+    : packageExplainSql;
   const hasBaselineMigrations =
     existsSync(migration001) && existsSync(migration003);
 
