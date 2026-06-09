@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "conformance": "node coordinate-recipe.mjs"
+    "conformance": "npm run build --prefix ../../packages/atlas-react && node coordinate-recipe.mjs"
   },
   "dependencies": {
     "@catlas/atlas-react": "*"
