@@ -10,6 +10,21 @@ See [`CONTRACT.md`](./CONTRACT.md). In short: **D1** access control is upstream
 (no auth in the atlas layer), **D2** data access is modular via the `AtlasStore`
 interface, **D3** HTTP serving is a recommendation, not a mandate.
 
+## Pinned adoption decisions (defaults)
+
+Resolved up-front so the M2→M5 climb can proceed; a pilot owner may override (then update the
+handoff brief too). Detail/rationale: [`CLOUD-HANDOFF.md`](./CLOUD-HANDOFF.md) §12.
+
+1. **Pilot adopter:** reference `@catlas/semantic-atlas` app (until a real product is named).
+2. **First scale target:** 1M (of 170k / 1M / 10M).
+3. **Doc policy:** adoption docs wrap (link) canonical docs; snippets only, with a source pointer.
+4. **Exported-type contract:** CHANGELOG keyed to `ATLAS_CONTRACT_VERSION` for root exports + `/types` shapes.
+5. **Coordinate fallback:** normalize via the recipe (CONTRACT §3); if unmappable, stop at M1.5 and revisit the projection.
+6. **Promotion authority:** peer review now; `catlas-evidence-reviewer` once it exists.
+7. **Tool home:** `catlas-*` tools start inside `@catlas/atlas-benchmarks`.
+8. **Visual baseline:** no reference PNG committed → `--min-reference-score` stays advisory, not a hard gate.
+9. **Visual test strategy:** rely on `ui-graph-evaluator` + Claude-in-Chrome; defer filling the `@playwright/test` stubs.
+
 ## Wave 0 — the pinned contract (this commit)
 
 The shared seam, pinned before branches diverge:
@@ -77,8 +92,12 @@ Everything else finishes in Wave 1.
 
 ## Status
 
+Wave-1 PRs are merged (below); the per-slice **"Done when"** criteria above still need a
+verification pass before promotion (see [`CLOUD-HANDOFF.md`](./CLOUD-HANDOFF.md) §5.2).
+
 - [x] Wave 0 — contract pinned *(merged in #10)*
-- [ ] Claude Code — modular boundary + gate
-- [ ] Codex — conformance + aggregation + recipe
-- [ ] Cursor — renderer surface
-- [ ] Devin — docs + packaging + plan rewrite
+- [x] Claude Code — modular `AtlasStore` boundary + `lightweightEntity` *(merged in #14; `./contract` barrel tidied in #18)*
+- [x] Codex — conformance runtime + aggregation + coordinate recipe *(`80b92ad` + `examples/atlas-data-prep`)*
+- [x] Cursor — renderer adoption surface *(merged in #15)*
+- [x] Devin — docs + packaging + plan rewrite *(merged in #11)*
+- [ ] Wave 2 — pack smoke test (Codex ← Devin's pack hook) · skills + educational benchmark wording (Claude Code ← Codex M2 mapping + Devin links)
