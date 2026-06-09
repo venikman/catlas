@@ -117,7 +117,7 @@ Payload and row caps:
 
 The first-pass gate also has explicit hard caps for payloads that should fail only when the architecture becomes unsafe: initial atlas API payload `<= 2 MB` and high-zoom point payload `<= 5 MB`. The stricter good/SOTA targets are reported as warnings or SOTA misses.
 
-Some compatibility values can be overridden through environment variables in `benchmarks/budgets.ts`.
+Some compatibility values can be overridden through environment variables in `packages/atlas-benchmarks/src/budgets.ts`.
 
 ## What The Validator Checks
 

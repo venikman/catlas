@@ -79,7 +79,7 @@ Browser/runtime verification should confirm:
 - No framework overlay is visible.
 - The atlas renderer uses Canvas 2D plus SVG overlays, not WebGL.
 - `document.querySelector('[data-testid="atlas-map-canvas"]')` is present and nonblank.
-- `svg[aria-label^="Semantic atlas map"]` is present (the full label also includes the live rendered-point count).
+- The map surface (`[data-testid="atlas-canvas"]`) exposes an `aria-label` starting with `"Semantic atlas map"`. (The `<svg>` overlay element itself carries no `aria-label`; the accessible label lives on the canvas container.)
 - No fresh browser warning/error logs appear after reload.
 - Search result selection opens the inspector and switches to point LOD.
 - Mobile viewport has no horizontal overflow.
