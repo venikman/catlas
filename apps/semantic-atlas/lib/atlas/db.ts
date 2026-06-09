@@ -1,5 +1,6 @@
 import pg from "pg";
 import { ATLAS_LOD_CONFIG } from "./lod";
+import { ATLAS_RUNTIME_CONFIG } from "./runtimeConfig";
 import {
   demoDatasetStats,
   getDemoEntity,
@@ -345,24 +346,50 @@ export async function searchAtlas(input: {
   if (getAtlasSourceMode() === "demo") return searchDemoAtlas(input);
 
   const activePool = requirePool();
+  const limit = input.limit ?? ATLAS_LOD_CONFIG.maxSearchResults;
+  // sec-2: bound the candidate scan so an anonymous request can't score the whole view.
+  // Three layers keep the work bounded: (1) the q-length guard (validation.ts) rejects
+  // degenerate short queries — terms under ~3 chars degrade trigram-index selectivity, so
+  // adopters on large views raise ATLAS_MIN_SEARCH_QUERY_LENGTH; (2) the leading-wildcard
+  // ILIKE is served by the trigram GIN indexes on `label` (migration 001) and `cluster_id`
+  // (migration 003), not a full-view seq scan; (3) the candidate LIMIT caps how many matching
+  // rows are scored. Trade-off: with more than maxCandidates matches the global-best by
+  // similarity may be missed — adopters tune ATLAS_MAX_SEARCH_CANDIDATES or move to a
+  // dedicated search index. Per-IP / per-view throttling stays the host app's responsibility (D1).
+  const maxCandidates = Math.max(
+    limit,
+    ATLAS_RUNTIME_CONFIG.limits.maxSearchCandidates,
+  );
   const result = await activePool.query(
     `
+      with candidates as (
+        select
+          p.entity_id,
+          p.label,
+          p.entity_type,
+          p.x,
+          p.y,
+          p.cluster_id,
+          p.importance
+        from atlas_points p
+        join atlas_views v on v.id = p.view_id
+        where v.slug = $1
+          and (p.label ilike '%' || $2 || '%' or p.cluster_id ilike '%' || $2 || '%')
+        limit $4
+      )
       select
-        p.entity_id,
-        p.label,
-        p.entity_type,
-        p.x,
-        p.y,
-        p.cluster_id,
-        similarity(p.label, $2) as score
-      from atlas_points p
-      join atlas_views v on v.id = p.view_id
-      where v.slug = $1
-        and (p.label ilike '%' || $2 || '%' or p.cluster_id ilike '%' || $2 || '%')
-      order by score desc, p.importance desc
+        entity_id,
+        label,
+        entity_type,
+        x,
+        y,
+        cluster_id,
+        similarity(label, $2) as score
+      from candidates
+      order by score desc, importance desc
       limit $3
     `,
-    [input.view, input.q, input.limit ?? ATLAS_LOD_CONFIG.maxSearchResults],
+    [input.view, input.q, limit, maxCandidates],
   );
 
   return result.rows.map((row) => ({

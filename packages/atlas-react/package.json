@@ -28,6 +28,10 @@
     "./visualConfig": {
       "types": "./dist/lib/atlas/visualConfig.d.ts",
       "import": "./dist/lib/atlas/visualConfig.js"
+    },
+    "./contract": {
+      "types": "./dist/contract/atlasStore.d.ts",
+      "import": "./dist/contract/atlasStore.js"
     }
   },
   "files": [

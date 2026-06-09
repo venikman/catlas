@@ -37,6 +37,8 @@ export const ATLAS_RUNTIME_CONFIG = {
       "ATLAS_MAX_SEARCH_RESULTS",
       ATLAS_LOD_CONFIG.maxSearchResults,
     ),
+    maxSearchCandidates: envInt("ATLAS_MAX_SEARCH_CANDIDATES", 2000),
+    minSearchQueryLength: envInt("ATLAS_MIN_SEARCH_QUERY_LENGTH", 2),
     maxBboxSpan: envInt("ATLAS_MAX_BBOX_SPAN", 80),
     maxHighZoomBboxSpan: envInt("ATLAS_MAX_HIGH_ZOOM_BBOX_SPAN", 12),
   },

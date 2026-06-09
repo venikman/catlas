@@ -1,6 +1,7 @@
-import { getAtlasEntity, getAtlasSourceMode } from "@/lib/atlas/db";
+import { lightweightEntity } from "@/lib/atlas/responseShaping";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
+import { getAtlasStore, isAtlasStoreAvailable } from "@/lib/atlas/store";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const timer = createAtlasRouteTimer("entity");
-  if (getAtlasSourceMode() === "unavailable") {
+  if (!isAtlasStoreAvailable()) {
     return atlasError("DATABASE_URL is not configured.", {
       code: "ATLAS_DATABASE_UNAVAILABLE",
       status: 503,
@@ -30,8 +31,8 @@ export async function GET(
     });
   }
 
-  const entity = await timer.measure("query", () => getAtlasEntity(id));
-  if (!entity) {
+  const rawEntity = await timer.measure("query", () => getAtlasStore().getEntity(id));
+  if (!rawEntity) {
     return atlasError("Entity not found.", {
       code: "ATLAS_ENTITY_NOT_FOUND",
       status: 404,
@@ -41,6 +42,7 @@ export async function GET(
   }
 
   const serializationStartedAt = performance.now();
+  const entity = lightweightEntity(rawEntity);
   timer.mark("serialize", serializationStartedAt);
   logAtlasRequest({
     count: 1,

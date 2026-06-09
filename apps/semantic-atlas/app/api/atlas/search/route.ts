@@ -1,14 +1,14 @@
-import { getAtlasSourceMode, searchAtlas } from "@/lib/atlas/db";
 import { isTruncated } from "@/lib/atlas/responseShaping";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
+import { getAtlasStore, isAtlasStoreAvailable } from "@/lib/atlas/store";
 import { parseAtlasSearchParams } from "@/lib/atlas/validation";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const timer = createAtlasRouteTimer("search");
-  if (getAtlasSourceMode() === "unavailable") {
+  if (!isAtlasStoreAvailable()) {
     return atlasError("DATABASE_URL is not configured.", {
       code: "ATLAS_DATABASE_UNAVAILABLE",
       status: 503,
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
   const limit = Math.min(parsed.value.limit, ATLAS_RUNTIME_CONFIG.limits.maxSearchResults);
   const results = await timer.measure("query", () =>
-    searchAtlas({ ...parsed.value, limit }),
+    getAtlasStore().search({ ...parsed.value, limit }),
   );
   const serializationStartedAt = performance.now();
   timer.mark("serialize", serializationStartedAt);

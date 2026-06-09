@@ -1,15 +1,15 @@
-import { getAtlasSourceMode, listAtlasPoints } from "@/lib/atlas/db";
 import { shouldFetchPoints } from "@/lib/atlas/lod";
 import { isTruncated, lightweightPoints } from "@/lib/atlas/responseShaping";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
+import { getAtlasStore, isAtlasStoreAvailable } from "@/lib/atlas/store";
 import { parseAtlasBboxParams } from "@/lib/atlas/validation";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const timer = createAtlasRouteTimer("points");
-  if (getAtlasSourceMode() === "unavailable") {
+  if (!isAtlasStoreAvailable()) {
     return atlasError("DATABASE_URL is not configured.", {
       code: "ATLAS_DATABASE_UNAVAILABLE",
       status: 503,
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
   const limit = Math.min(parsed.value.limit, ATLAS_RUNTIME_CONFIG.limits.maxPoints);
   const rawPoints = await timer.measure("query", () =>
-    listAtlasPoints({ ...parsed.value, limit }),
+    getAtlasStore().listPoints({ ...parsed.value, limit }),
   );
   const serializationStartedAt = performance.now();
   const points = lightweightPoints(rawPoints);

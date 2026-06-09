@@ -86,8 +86,13 @@ export function parseAtlasSearchParams(
   }
 
   const q = value(params, "q")?.trim() ?? "";
-  if (q.length < 2 || q.length > 120) {
-    return { ok: false, status: 400, error: "Search query must be 2-120 characters." };
+  const minLength = ATLAS_RUNTIME_CONFIG.limits.minSearchQueryLength;
+  if (q.length < minLength || q.length > 120) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Search query must be ${minLength}-120 characters.`,
+    };
   }
 
   const requestedLimit = Number.parseInt(value(params, "limit") ?? "", 10);
