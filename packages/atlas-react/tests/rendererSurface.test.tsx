@@ -10,7 +10,7 @@ import {
   viewSpanForWorldBounds,
 } from "../src/components/atlas";
 import type { AtlasViewportState } from "../src/components/atlas/atlasComponentTypes";
-import type { AtlasDensityTile, AtlasPoint } from "../src/lib/atlas/types";
+import type { AtlasCluster, AtlasDensityTile, AtlasPoint } from "../src/lib/atlas/types";
 import { getPointVisualStyle } from "../src/lib/atlas/visualConfig";
 
 const viewport: AtlasViewportState = { centerX: 0.5, centerY: 0.5, zoom: 0 };
@@ -40,6 +40,24 @@ const sampleDensityTile: AtlasDensityTile = {
   xTile: 0,
   yTile: 0,
   z: 0,
+};
+
+const sampleCluster: AtlasCluster = {
+  boundsMaxX: 1,
+  boundsMaxY: 1,
+  boundsMinX: -1,
+  boundsMinY: -1,
+  centroidX: 0,
+  centroidY: 0,
+  clusterId: "cluster-1",
+  colorKey: "#2563eb",
+  id: "c1",
+  importance: 0.5,
+  label: "Research",
+  lodLevel: 3,
+  pointCount: 100,
+  radius: 1,
+  viewId: "v1",
 };
 
 describe("renderer adoption surface", () => {
@@ -220,5 +238,40 @@ describe("renderer adoption surface", () => {
     );
 
     expect(selected.strokeColor).toContain("255, 0, 0");
+  });
+
+  it("exposes cluster hit targets to assistive tech", () => {
+    const { container } = render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        status="ready"
+      />,
+    );
+
+    const hitTarget = container.querySelector('[data-atlas-kind="cluster-hit"]');
+    expect(hitTarget).toHaveAttribute("aria-label", "Select cluster: Research");
+    expect(hitTarget).toHaveAttribute("role", "button");
+    expect(hitTarget).toHaveAttribute("tabindex", "0");
+  });
+
+  it("activates clusters from the keyboard", () => {
+    const onSelectCluster = vi.fn();
+    const { container } = render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        onSelectCluster={onSelectCluster}
+        status="ready"
+      />,
+    );
+
+    const clusterButton = container.querySelector('[data-atlas-kind="cluster-hit"]');
+    expect(clusterButton).toBeTruthy();
+    fireEvent.keyDown(clusterButton!, { key: "Enter" });
+
+    expect(onSelectCluster).toHaveBeenCalledWith(sampleCluster);
   });
 });

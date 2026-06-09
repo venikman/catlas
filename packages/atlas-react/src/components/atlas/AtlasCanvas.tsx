@@ -927,6 +927,12 @@ function mapLabel(label: string, maxLength: number): string {
   return `${formatted.slice(0, maxLength - 3)}...`;
 }
 
+function clusterSelectLabel(cluster: AtlasCluster): string {
+  return cluster.label
+    ? `Select cluster: ${cluster.label}`
+    : `Select cluster ${cluster.clusterId}`;
+}
+
 export function AtlasCanvas({
   bbox,
   clusters,
@@ -968,12 +974,20 @@ export function AtlasCanvas({
     }),
     [palette.paper],
   );
+  const [surfaceFocused, setSurfaceFocused] = useState(false);
+  const interactiveRootStyle = useMemo<CSSProperties>(
+    () =>
+      surfaceFocused
+        ? {
+            ...rootStyle,
+            boxShadow: `inset 0 0 0 2px ${palette.selectedStroke}`,
+          }
+        : rootStyle,
+    [palette.selectedStroke, rootStyle, surfaceFocused],
+  );
   const mapAriaLabel = useMemo(() => {
-    const countLabel =
-      renderedCount != null
-        ? `${renderedCount} points rendered`
-        : `${points.length} points in view`;
-    return `Semantic atlas map. ${countLabel}. Use arrow keys to pan and plus or minus to zoom.`;
+    const count = renderedCount ?? points.length;
+    return `Semantic atlas map. ${count} points rendered. Use arrow keys to pan and plus or minus to zoom.`;
   }, [points.length, renderedCount]);
   const pixelWorld = Math.max(spanX / 980, spanY / 720);
   const densityRegions = useMemo(
@@ -1449,8 +1463,10 @@ export function AtlasCanvas({
     <div
       ref={containerRef}
       aria-label={mapAriaLabel}
-      className="absolute inset-0 overflow-hidden bg-[#efefec]"
+      className="absolute inset-0 overflow-hidden"
       data-testid="atlas-canvas"
+      onBlur={() => setSurfaceFocused(false)}
+      onFocus={() => setSurfaceFocused(true)}
       onKeyDown={handleKeyDown}
       onPointerCancel={handlePointerUp}
       onPointerDown={handlePointerDown}
@@ -1461,7 +1477,7 @@ export function AtlasCanvas({
       onPointerUp={handlePointerUp}
       onWheel={handleWheel}
       role="application"
-      style={rootStyle}
+      style={interactiveRootStyle}
       tabIndex={0}
     >
       <div
@@ -1480,11 +1496,9 @@ export function AtlasCanvas({
         style={CANVAS_TEXTURE_STYLE}
       />
       <svg
-        aria-hidden="true"
         className="absolute inset-0 z-[3] h-full w-full cursor-grab touch-none active:cursor-grabbing"
         data-testid="atlas-overlay"
         preserveAspectRatio="xMidYMid slice"
-        role="img"
         style={CANVAS_SVG_STYLE}
         viewBox={`${bbox.minX} ${bbox.minY} ${spanX} ${spanY}`}
       >
@@ -1614,14 +1628,9 @@ export function AtlasCanvas({
               return (
                 <g
                   key={cluster.id}
-                  aria-label={
-                    cluster.label
-                      ? `Cluster: ${cluster.label}`
-                      : `Cluster ${cluster.clusterId}`
-                  }
+                  aria-hidden="true"
                   data-atlas-cluster-id={cluster.clusterId}
                   data-atlas-kind="cluster"
-                  role="img"
                   onClick={(event) => {
                     event.stopPropagation();
                     onSelectCluster(cluster);
@@ -1676,11 +1685,7 @@ export function AtlasCanvas({
               return (
                 <circle
                   key={`${cluster.id}-hit`}
-                  aria-label={
-                    cluster.label
-                      ? `Select cluster: ${cluster.label}`
-                      : `Select cluster ${cluster.clusterId}`
-                  }
+                  aria-label={clusterSelectLabel(cluster)}
                   cx={cluster.centroidX}
                   cy={cluster.centroidY}
                   data-atlas-cluster-id={cluster.clusterId}
@@ -1690,7 +1695,16 @@ export function AtlasCanvas({
                   role="button"
                   r={style.radius}
                   stroke="transparent"
+                  tabIndex={0}
                   onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectCluster(cluster);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") {
+                      return;
+                    }
+                    event.preventDefault();
                     event.stopPropagation();
                     onSelectCluster(cluster);
                   }}
