@@ -66,7 +66,61 @@ npm run bench:ui -- \
   --gate
 ```
 
+## Agent-Assisted Adoption Playbooks
+
+Agentic assistance should produce repeatable work, not unreviewed transformations. Repo-local agent skills should live under `.cursor/skills/catlas-*/SKILL.md`; human-readable summaries can be linked from `docs/adoption/agent-playbooks.md`.
+
+| Playbook | Mode | Role | Inputs | Outputs |
+| --- | --- | --- | --- | --- |
+| `catlas-adoption-scout` | Agent-first | Explore an adopter repo and identify app framework, database access, graph surface, and styling system. | Repo path, package manager, target app route. | Adoption assessment and recommended next file edits. |
+| `catlas-benchmark-gate` | Agent-first | Add repeatable local and CI benchmark commands. | Local app URL, selectors, expected gates. | Commands, report paths, pass/warn/fail policy. |
+| `catlas-postgres-prep` | Hybrid | Map source Postgres tables into atlas import shapes. | Schema dump, sample rows, target views. | Mapping plan, transform script outline, index checklist. |
+| `catlas-styling-adapter` | Hybrid | Align atlas data colors and host chrome with product design tokens. | Token docs, screenshots, component paths. | Styling plan and benchmark selectors. |
+| `catlas-evidence-reviewer` | Human-first | Review an adoption PR for maturity claims. | PR diff, benchmark reports, screenshots. | Accepted findings, rejected findings, residual risks. |
+
+Each skill must define YAML frontmatter, preconditions, path globs for allowed edits, prohibited actions, stop conditions, and copy-paste validation commands. Common prohibited actions: never commit `.env`, generated production data, database dumps, or credentials; never run destructive SQL such as `DROP TABLE`; never claim M2 or higher without source-data evidence.
+
+Worked example for `catlas-benchmark-gate`:
+
+```text
+Preconditions: app route is known, package manager is known, and a canvas/SVG graph surface exists.
+Stop condition: stop after 3 route scans if no graph selector can be found.
+Allowed edits: package scripts, docs, CI example files, and benchmark selector config.
+Validation: run Tier A `ui-graph-evaluator` first; run Tier B clickable audit only for semantic-atlas-compatible shell chrome.
+Output: commands, report paths, pass/warn/fail interpretation, and maturity level supported by evidence.
+```
+
+Worked example for `catlas-adoption-scout`:
+
+```text
+Preconditions: repo path is known and dependencies can be inspected read-only.
+Stop condition: stop if no React app, graph surface, or route candidate is found after 3 route scans.
+Allowed edits: none during scout mode.
+Validation: report package manager, app routes, likely graph selectors, styling system, data source, and recommended first maturity target.
+Output: adoption-readiness summary plus next skill to run.
+```
+
+## Proposed Tools
+
+Current tools to document as adopter-facing:
+
+- `@catlas/atlas-react`: renderer package and types.
+- `@catlas/ui-graph-evaluator`: portable graph UI benchmark.
+- `@catlas/atlas-benchmarks`: atlas API, render, LOD, and clickable gates.
+- Reference migrations under `apps/semantic-atlas/migrations`.
+- `packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql` for query-plan review.
+- Docker Compose Postgres setup for disposable local validation.
+
+New tools to consider after docs are in place:
+
+- `catlas-adoption-doctor`: verifies selectors, package boundaries, app URL health, and benchmark readiness.
+- `catlas-postgres-profile`: summarizes source row counts, candidate keys, null rates, and index coverage from a read-only database connection.
+- `catlas-data-prep-check`: validates transformed rows before seed/import, including coordinate bounds and missing labels.
+- `catlas-evidence-pack`: collects benchmark JSON/Markdown, screenshots, query plans, and environment summaries into one PR attachment folder.
+
 ## Contract Stability
+
+Canonical contract: [`docs/adoption/CONTRACT.md`](adoption/CONTRACT.md) (`ATLAS_CONTRACT_VERSION`). This section summarizes the plan-level contract scope.
 
 The public exports from `@catlas/atlas-react` plus the data-shape exports from `@catlas/atlas-react/types` are the adoption contract. Root exports include the component, component props, viewport state, layer toggles, and helpers such as `bboxForViewport`; the `/types` subpath covers atlas data shapes such as `AtlasPoint`, `AtlasCluster`, `AtlasDensityTile`, and `AtlasView`. Adoption docs must show the correct import path for each symbol.
 
@@ -171,57 +225,23 @@ The styling doc should include a selector registry:
 | `[data-testid="atlas-root"]` | `@catlas/semantic-atlas` | Reference-shell root selector. |
 | `[data-testid="atlas-search-input"]`, `[data-atlas-kind="lod-button"]`, `[data-atlas-kind="view-button"]`, `[data-atlas-kind="layer-toggle"]`, `[data-testid="atlas-side-panel"]` | `@catlas/semantic-atlas` | Tier B clickable audit only. |
 
-## Agent-Assisted Adoption Playbooks
+## M5 Production Readiness
 
-Agentic assistance should produce repeatable work, not unreviewed transformations. Repo-local agent skills should live under `.cursor/skills/catlas-*/SKILL.md`; human-readable summaries can be linked from `docs/adoption/agent-playbooks.md`.
+M5 evidence extends [`docs/atlas-production.md`](atlas-production.md) with adoption-specific expectations. It does not duplicate the production guide.
 
-| Playbook | Mode | Role | Inputs | Outputs |
-| --- | --- | --- | --- | --- |
-| `catlas-adoption-scout` | Agent-first | Explore an adopter repo and identify app framework, database access, graph surface, and styling system. | Repo path, package manager, target app route. | Adoption assessment and recommended next file edits. |
-| `catlas-benchmark-gate` | Agent-first | Add repeatable local and CI benchmark commands. | Local app URL, selectors, expected gates. | Commands, report paths, pass/warn/fail policy. |
-| `catlas-postgres-prep` | Hybrid | Map source Postgres tables into atlas import shapes. | Schema dump, sample rows, target views. | Mapping plan, transform script outline, index checklist. |
-| `catlas-styling-adapter` | Hybrid | Align atlas data colors and host chrome with product design tokens. | Token docs, screenshots, component paths. | Styling plan and benchmark selectors. |
-| `catlas-evidence-reviewer` | Human-first | Review an adoption PR for maturity claims. | PR diff, benchmark reports, screenshots. | Accepted findings, rejected findings, residual risks. |
+Adopters claiming M5 must provide evidence for:
 
-Each skill must define YAML frontmatter, preconditions, path globs for allowed edits, prohibited actions, stop conditions, and copy-paste validation commands. Common prohibited actions: never commit `.env`, generated production data, database dumps, or credentials; never run destructive SQL such as `DROP TABLE`; never claim M2 or higher without source-data evidence.
+| Area | Evidence | Source |
+| --- | --- | --- |
+| Scale budget | Chosen 170k / 1M / 10M tier with supporting `EXPLAIN ANALYZE` samples. | `atlas-production.md` § Scale Plan |
+| Caching | Configured TTLs per LOD band with rationale for refresh cadence. | `atlas-production.md` § Caching Strategy |
+| Indexes | All required indexes applied; optional PostGIS decision documented. | `atlas-production.md` § Required Indexes |
+| Monitoring | Minimum checklist items instrumented or explicitly deferred with rationale. | `atlas-production.md` § Monitoring Checklist |
+| Privacy | Access-control plan or explicit "atlas data is public" statement. | `atlas-production.md` § Known Risks |
+| Refresh strategy | Documented cadence for coordinate regeneration, cluster/density rebuild, and cache invalidation. | `atlas-production.md` § Real-Data Integration Still Needed |
+| Operational commands | All commands in `atlas-production.md` § Operational Commands verified against the adopter environment. | `atlas-production.md` § Operational Commands |
 
-Worked example for `catlas-benchmark-gate`:
-
-```text
-Preconditions: app route is known, package manager is known, and a canvas/SVG graph surface exists.
-Stop condition: stop after 3 route scans if no graph selector can be found.
-Allowed edits: package scripts, docs, CI example files, and benchmark selector config.
-Validation: run Tier A `ui-graph-evaluator` first; run Tier B clickable audit only for semantic-atlas-compatible shell chrome.
-Output: commands, report paths, pass/warn/fail interpretation, and maturity level supported by evidence.
-```
-
-Worked example for `catlas-adoption-scout`:
-
-```text
-Preconditions: repo path is known and dependencies can be inspected read-only.
-Stop condition: stop if no React app, graph surface, or route candidate is found after 3 route scans.
-Allowed edits: none during scout mode.
-Validation: report package manager, app routes, likely graph selectors, styling system, data source, and recommended first maturity target.
-Output: adoption-readiness summary plus next skill to run.
-```
-
-## Proposed Tools
-
-Current tools to document as adopter-facing:
-
-- `@catlas/atlas-react`: renderer package and types.
-- `@catlas/ui-graph-evaluator`: portable graph UI benchmark.
-- `@catlas/atlas-benchmarks`: atlas API, render, LOD, and clickable gates.
-- Reference migrations under `apps/semantic-atlas/migrations`.
-- `packages/atlas-benchmarks/src/sql/explain-atlas-queries.sql` for query-plan review.
-- Docker Compose Postgres setup for disposable local validation.
-
-New tools to consider after docs are in place:
-
-- `catlas-adoption-doctor`: verifies selectors, package boundaries, app URL health, and benchmark readiness.
-- `catlas-postgres-profile`: summarizes source row counts, candidate keys, null rates, and index coverage from a read-only database connection.
-- `catlas-data-prep-check`: validates transformed rows before seed/import, including coordinate bounds and missing labels.
-- `catlas-evidence-pack`: collects benchmark JSON/Markdown, screenshots, query plans, and environment summaries into one PR attachment folder.
+M5 is the final maturity level. It does not require all production concerns to be resolved — only that product owners have reviewed each area, recorded decisions, and identified residual risks with owners and timelines.
 
 ## Execution Plan
 
@@ -232,7 +252,7 @@ New tools to consider after docs are in place:
 - Pick the first external scale target from the existing 170k, 1M, and 10M tiers.
 - Decide the documentation policy: adoption docs wrap canonical docs unless a source-of-truth section is explicitly moved.
 - Record the contract-stability policy for exported renderer types before asking adopters to depend on them.
-- Restore or remove ghost `validate:atlas` references.
+- ~~Restore or remove ghost `validate:atlas` references.~~ Done — root script added.
 - Fix `atlas-analyze-queries.ts` SQL path drift.
 - Canonicalize report paths per tool.
 - Add the `docs/adoption/index.md` decision tree skeleton before expanding the rest of the adoption-doc spine.
@@ -324,15 +344,25 @@ Every adoption PR should include:
 
 ## Review Policy
 
-Adoption claims should be reviewed using the First Principles Framework claim-validation distinctions:
+Adoption claims should be reviewed against benchmark finding IDs, not abstract principles. Each claim must map to concrete validator output:
 
-- **Promise:** What the docs or PR says other products can rely on.
-- **Ability:** What the code and examples are capable of today.
-- **Performance:** What benchmark reports, query plans, screenshots, and runtime checks prove.
+- **Promise** maps to the maturity level claimed in docs or PR.
+- **Ability** maps to validator findings with `status: "pass"` or `status: "skip"` — code exists and runs but may not yet produce measured evidence.
+- **Performance** maps to findings with measured values under budget — `hardFailures`, `sotaMisses`, `warnings`, and `skipped` from `createReportFindings()`.
+
+Key finding-id categories that gate maturity claims:
+
+| Maturity | Required finding IDs (pass or acceptable warn; not skip) |
+| --- | --- |
+| M1 | `renderer-point-elements`, `runtime-test-hook` |
+| M2 | `client-no-db-import`, `lod-thresholds-centralized`, `points-bbox-validation`, `points-no-bulk-metadata` (minimum subset; full source-invariant list required at M4) |
+| M3 | `visual-config-centralized`, `render-browser-console-warnings` (warn acceptable) |
+| M4 | All source-invariant IDs pass; `payload-density-size`, `payload-clusters-size`, `payload-points-hard-cap` under budget |
+| M5 | M4 + DB validator emits pass (not skip) for `db-views-list-latency`, `db-density-bbox-latency`, `db-clusters-bbox-latency`, `db-points-bbox-latency`, `db-entity-lookup-latency`, `db-search-latency` plus per-scenario row-bound and index-plan checks |
 
 Reject claims that skip from ability to promise without measured evidence.
 
-Overclaim example: a PR says "M4 benchmark-validated integration complete" but only ran `bench:atlas:quick` without `--gate` and attached no report. The ability exists because benchmarks are configured, but no measured performance evidence supports the M4 promise.
+Overclaim example: a PR says "M4 benchmark-validated integration complete" but only ran `bench:atlas:quick` without `--gate` and attached no report. The ability exists because benchmarks are configured, but no measured performance evidence supports the M4 promise — specifically, finding IDs `payload-density-size`, `payload-clusters-size`, `payload-points-hard-cap` were never emitted with `status: "pass"`.
 
 ## Success Criteria
 
