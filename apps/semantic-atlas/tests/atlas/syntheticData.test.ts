@@ -45,4 +45,18 @@ describe("synthetic atlas data", () => {
       expect((repIds as string[]).length).toBeLessThanOrEqual(5);
     }
   });
+
+  it("keeps every synthetic point within the world bounds it claims", () => {
+    // seed 4063122 projects one point to x≈7.106 (cluster scientific-computing).
+    // Without clamping, aggregateClusters rejects it and the batch throws.
+    for (const seed of [42, 170_432, 4_063_122]) {
+      const batch = createSyntheticAtlasBatch({ count: 1, seed });
+      for (const point of batch.points) {
+        expect(point.x).toBeGreaterThanOrEqual(ATLAS_DEFAULT_WORLD_BOUNDS.minX);
+        expect(point.x).toBeLessThanOrEqual(ATLAS_DEFAULT_WORLD_BOUNDS.maxX);
+        expect(point.y).toBeGreaterThanOrEqual(ATLAS_DEFAULT_WORLD_BOUNDS.minY);
+        expect(point.y).toBeLessThanOrEqual(ATLAS_DEFAULT_WORLD_BOUNDS.maxY);
+      }
+    }
+  });
 });

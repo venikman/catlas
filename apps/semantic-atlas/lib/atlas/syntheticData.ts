@@ -237,6 +237,10 @@ function viewPosition(
   };
 }
 
+function clampToWorld(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function createPoint(
   entityIndex: number,
   view: AtlasView,
@@ -253,8 +257,8 @@ function createPoint(
     entityId,
     viewId: view.id,
     viewSlug: view.slug,
-    x: position.x,
-    y: position.y,
+    x: clampToWorld(position.x, ATLAS_DEFAULT_WORLD_BOUNDS.minX, ATLAS_DEFAULT_WORLD_BOUNDS.maxX),
+    y: clampToWorld(position.y, ATLAS_DEFAULT_WORLD_BOUNDS.minY, ATLAS_DEFAULT_WORLD_BOUNDS.maxY),
     clusterId: cluster.id,
     label,
     entityType: rng() > 0.2 ? cluster.type : "Paper",
