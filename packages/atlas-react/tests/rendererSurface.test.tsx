@@ -60,6 +60,14 @@ const sampleCluster: AtlasCluster = {
   viewId: "v1",
 };
 
+const sampleClusterB: AtlasCluster = {
+  ...sampleCluster,
+  centroidX: 0.6,
+  clusterId: "cluster-2",
+  id: "c2",
+  label: "Engineering",
+};
+
 describe("renderer adoption surface", () => {
   it("derives bbox spans from worldBounds per contract §3", () => {
     const unitWorld = { minX: 0, maxX: 1, minY: 0, maxY: 1 };
@@ -303,5 +311,59 @@ describe("renderer adoption surface", () => {
 
     expect(onSelectCluster).toHaveBeenCalledTimes(2);
     expect(onSelectCluster).toHaveBeenLastCalledWith(sampleCluster);
+  });
+
+  it("uses roving tabindex so the cluster layer is one tab stop", () => {
+    render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster, sampleClusterB]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        status="ready"
+      />,
+    );
+
+    const research = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
+    const engineering = screen.getByRole("button", {
+      name: "Select cluster: Engineering",
+    });
+
+    // Exactly one cluster is reachable via Tab at a time.
+    expect(research).toHaveAttribute("tabindex", "0");
+    expect(engineering).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("rove with arrows (without panning) and exits to the surface on Escape", () => {
+    const onViewportChange = vi.fn();
+    render(
+      <SemanticAtlasMap
+        clusters={[sampleCluster, sampleClusterB]}
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
+        lod="clusters"
+        onViewportChange={onViewportChange}
+        status="ready"
+      />,
+    );
+
+    const research = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
+    const engineering = screen.getByRole("button", {
+      name: "Select cluster: Engineering",
+    });
+
+    research.focus();
+    fireEvent.keyDown(research, { key: "ArrowRight" });
+
+    // Focus moved to the next cluster; the map did NOT pan (event was stopped).
+    expect(document.activeElement).toBe(engineering);
+    expect(engineering).toHaveAttribute("tabindex", "0");
+    expect(research).toHaveAttribute("tabindex", "-1");
+    expect(onViewportChange).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(engineering, { key: "Escape" });
+    expect(document.activeElement).toBe(screen.getByRole("application"));
   });
 });
