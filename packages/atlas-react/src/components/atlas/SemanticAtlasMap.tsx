@@ -172,7 +172,8 @@ export function SemanticAtlasMap({
   const activeBbox = bbox ?? bboxForViewport(activeViewport, worldBounds);
   const activeLod = lod ?? getLodForZoom(activeViewport.zoom).layer;
   const palette = useMemo(() => resolveAtlasPalette(theme), [theme]);
-  const dataPresent = hasAtlasData({ clusters, densityTiles, points });
+  const dataPresent =
+    hasAtlasData({ clusters, densityTiles, points }) || targetMarker != null;
   const resolvedStatus = useMemo<AtlasRendererStatus>(() => {
     if (status === "ready" && !dataPresent) {
       return "empty";

@@ -11,6 +11,7 @@ import {
 } from "../src/components/atlas";
 import type { AtlasViewportState } from "../src/components/atlas/atlasComponentTypes";
 import type { AtlasDensityTile, AtlasPoint } from "../src/lib/atlas/types";
+import { getPointVisualStyle } from "../src/lib/atlas/visualConfig";
 
 const viewport: AtlasViewportState = { centerX: 0.5, centerY: 0.5, zoom: 0 };
 
@@ -183,5 +184,41 @@ describe("renderer adoption surface", () => {
 
     const surface = screen.getByTestId("atlas-canvas");
     expect(surface).toHaveStyle({ background: "#001122" });
+  });
+
+  it("keeps marker-only ready states on the canvas", () => {
+    render(
+      <SemanticAtlasMap
+        status="ready"
+        targetMarker={{ id: "target-1", label: "Search hit", x: 1, y: 2 }}
+      />,
+    );
+
+    expect(screen.getByTestId("atlas-canvas")).toBeTruthy();
+    expect(screen.queryByText("No atlas data")).toBeNull();
+  });
+
+  it("threads selected and hover stroke theme overrides into point styles", () => {
+    const selected = getPointVisualStyle(
+      {
+        colorKey: "#2563eb",
+        hovered: false,
+        importance: 1,
+        lod: "points",
+        pixelWorld: 0.01,
+        selected: true,
+      },
+      {
+        fallback: "#64748b",
+        hoverStroke: "#00ff00",
+        ink: "#0f172a",
+        labelHalo: "rgba(0,0,0,0.7)",
+        mutedInk: "#475569",
+        paper: "#fff",
+        selectedStroke: "#ff0000",
+      },
+    );
+
+    expect(selected.strokeColor).toContain("255, 0, 0");
   });
 });

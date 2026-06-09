@@ -219,9 +219,10 @@ function atlasTextureColor(
   colorKey: string | undefined,
   random: () => number,
   neutralRate: number,
+  fallback: string,
 ): string {
   if (random() > neutralRate) {
-    return colorKey ?? ATLAS_VISUAL_CONFIG.palette.fallback;
+    return colorKey ?? fallback;
   }
 
   const neutralPalette = [
@@ -433,6 +434,7 @@ function buildClusterContours(clusters: AtlasCluster[]): AtlasContourPath[] {
 function buildDensityStipple(
   samples: DensitySample[],
   pixelWorld: number,
+  palette: AtlasPalette,
 ): AtlasDensityStipplePoint[] {
   const groups = new Map<
     string,
@@ -562,7 +564,7 @@ function buildDensityStipple(
       const noiseY = randomNormal(random) * pixelWorld * 3.2 + Math.sin(dustAngle) * dust;
 
       points.push({
-        colorKey: atlasTextureColor(lobe.colorKey, random, 0.32),
+        colorKey: atlasTextureColor(lobe.colorKey, random, 0.32, palette.fallback),
         id: `${key}-stipple-${index}`,
         opacity: 0.26 + Math.min(0.48, Math.sqrt(group.score) * 0.052) + random() * 0.16,
         radius: pixelWorld * (0.13 + random() * 0.31),
@@ -592,7 +594,7 @@ function buildDensityStipple(
         const localX = clampNumber(randomNormal(sampleRandom), -2.4, 2.4) * sampleRx;
         const localY = clampNumber(randomNormal(sampleRandom), -2.2, 2.2) * sampleRy;
         points.push({
-          colorKey: atlasTextureColor(sample.colorKey, sampleRandom, 0.28),
+          colorKey: atlasTextureColor(sample.colorKey, sampleRandom, 0.28, palette.fallback),
           id: `${sample.id}-micro-${sampleIndex}`,
           opacity:
             0.28 +
@@ -653,7 +655,7 @@ function buildDensityStipple(
         : sample.y * (1 - centerPull) + centerY * centerPull;
 
       points.push({
-        colorKey: atlasTextureColor(sample.colorKey, ambientRandom, 0.74),
+        colorKey: atlasTextureColor(sample.colorKey, ambientRandom, 0.74, palette.fallback),
         id: `density-ambient-${index}`,
         opacity: 0.11 + Math.min(0.19, Math.sqrt(sample.weight) * 0.05),
         radius: pixelWorld * (0.09 + ambientRandom() * 0.17),
@@ -706,7 +708,7 @@ function buildDensityStipple(
           interstitialRandom() < 0.5 ? firstSample.colorKey : secondSample.colorKey;
 
         points.push({
-          colorKey: atlasTextureColor(sourceColor, interstitialRandom, 0.82),
+          colorKey: atlasTextureColor(sourceColor, interstitialRandom, 0.82, palette.fallback),
           id: `density-interstitial-${index}`,
           opacity: 0.065 + interstitialRandom() * 0.11,
           radius: pixelWorld * (0.07 + interstitialRandom() * 0.15),
@@ -730,6 +732,7 @@ function buildPointContextStipple(
   points: RenderedAtlasPoint[],
   pixelWorld: number,
   lod: AtlasLodLayer,
+  palette: AtlasPalette,
 ): AtlasDensityStipplePoint[] {
   if (points.length === 0 || lod === "density") return [];
 
@@ -769,7 +772,7 @@ function buildPointContextStipple(
       const satelliteAngle = random() * Math.PI * 2;
 
       texturePoints.push({
-        colorKey: atlasTextureColor(point.colorKey, random, isClusterLod ? 0.18 : 0.12),
+        colorKey: atlasTextureColor(point.colorKey, random, isClusterLod ? 0.18 : 0.12, palette.fallback),
         id: `${point.entityId}-context-${index}`,
         opacity: isClusterLod
           ? 0.2 + importance * 0.22 + random() * 0.08
@@ -806,7 +809,7 @@ function buildPointContextStipple(
 
       texturePoints.push({
         colorKey:
-          start.colorKey ?? end.colorKey ?? ATLAS_VISUAL_CONFIG.palette.fallback,
+          start.colorKey ?? end.colorKey ?? palette.fallback,
         id: `cluster-bridge-${index}`,
         opacity: 0.08 + bridgeRandom() * 0.08,
         radius: pixelWorld * (0.08 + bridgeRandom() * 0.16),
@@ -978,12 +981,12 @@ export function AtlasCanvas({
     [densitySamples, pixelWorld],
   );
   const densityStipple = useMemo(
-    () => buildDensityStipple(densitySamples, pixelWorld),
-    [densitySamples, pixelWorld],
+    () => buildDensityStipple(densitySamples, pixelWorld, palette),
+    [densitySamples, palette, pixelWorld],
   );
   const pointContextStipple = useMemo(
-    () => buildPointContextStipple(renderedPoints, pixelWorld, lod),
-    [lod, pixelWorld, renderedPoints],
+    () => buildPointContextStipple(renderedPoints, pixelWorld, lod, palette),
+    [lod, palette, pixelWorld, renderedPoints],
   );
   const contourPaths = useMemo(() => buildClusterContours(clusters), [clusters]);
   const layerOpacities = useMemo(
@@ -1082,7 +1085,7 @@ export function AtlasCanvas({
           y: point.y,
         });
         const radius = clampNumber(point.radius * transform.scale, 0.55, 2.5);
-        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity);
+        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity, palette);
         drawTextureDot(context, screen.x, screen.y, radius);
       }
       context.restore();
@@ -1098,7 +1101,7 @@ export function AtlasCanvas({
           x: sample.x,
           y: sample.y,
         });
-        const style = getDensityVisualStyle(sample, pixelWorld);
+        const style = getDensityVisualStyle(sample, pixelWorld, palette);
         const haloRadius = clampNumber(style.haloRadius * transform.scale, 3, 48);
         const coreRadius = clampNumber(style.coreRadius * transform.scale, 1, 13);
         const gradient = context.createRadialGradient(
@@ -1111,7 +1114,7 @@ export function AtlasCanvas({
         );
         gradient.addColorStop(0, style.coreColor);
         gradient.addColorStop(0.42, style.haloColor);
-        gradient.addColorStop(1, rgbaCssFromHex(sample.colorKey, 0));
+        gradient.addColorStop(1, rgbaCssFromHex(sample.colorKey, 0, palette));
         context.beginPath();
         context.fillStyle = gradient;
         context.arc(screen.x, screen.y, haloRadius, 0, Math.PI * 2);
@@ -1143,7 +1146,7 @@ export function AtlasCanvas({
           lod === "clusters" ? 0.45 : 0.48,
           lod === "clusters" ? 2.2 : 2,
         );
-        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity);
+        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity, palette);
         drawTextureDot(context, screen.x, screen.y, radius);
       }
       context.restore();
@@ -1157,15 +1160,18 @@ export function AtlasCanvas({
       for (const point of renderedPoints) {
         const selected = point.entityId === selectedEntityId;
         const hovered = point.entityId === hoveredEntityId;
-        const style = getPointVisualStyle({
-          colorKey: point.colorKey,
-          hovered,
-          importance: point.importance,
-          lod,
-          pixelWorld,
-          selected,
-          transitionOpacity: point.renderOpacity ?? 1,
-        });
+        const style = getPointVisualStyle(
+          {
+            colorKey: point.colorKey,
+            hovered,
+            importance: point.importance,
+            lod,
+            pixelWorld,
+            selected,
+            transitionOpacity: point.renderOpacity ?? 1,
+          },
+          palette,
+        );
         const screen = projectWorldPoint({
           bbox,
           transform,
@@ -1180,7 +1186,7 @@ export function AtlasCanvas({
 
         if (style.haloOpacity > 0) {
           context.beginPath();
-          context.fillStyle = rgbaCssFromHex(point.colorKey, style.haloOpacity);
+          context.fillStyle = rgbaCssFromHex(point.colorKey, style.haloOpacity, palette);
           context.arc(screen.x, screen.y, radius * 2.4, 0, Math.PI * 2);
           context.fill();
         }
@@ -1211,6 +1217,7 @@ export function AtlasCanvas({
     layers.density,
     layers.points,
     lod,
+    palette,
     pixelWorld,
     pointContextStipple,
     pointLayerOpacity,
@@ -1520,6 +1527,7 @@ export function AtlasCanvas({
                   stroke={rgbaCssFromHex(
                     region.colorKey,
                     ATLAS_VISUAL_CONFIG.regions.outerStrokeAlpha,
+                    palette,
                   )}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1531,10 +1539,12 @@ export function AtlasCanvas({
                   fill={rgbaCssFromHex(
                     region.colorKey,
                     ATLAS_VISUAL_CONFIG.regions.fillAlpha,
+                    palette,
                   )}
                   stroke={rgbaCssFromHex(
                     region.colorKey,
                     ATLAS_VISUAL_CONFIG.regions.strokeAlpha,
+                    palette,
                   )}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1586,6 +1596,7 @@ export function AtlasCanvas({
                   branch.colorKey,
                   ATLAS_VISUAL_CONFIG.branches.alpha *
                     (0.55 + branch.importance * 0.45),
+                  palette,
                 )}
                 strokeLinecap="round"
                 strokeWidth={ATLAS_VISUAL_CONFIG.branches.widthPx}
@@ -1599,7 +1610,7 @@ export function AtlasCanvas({
           <g data-atlas-layer="clusters" opacity={clusterLayerOpacity}>
             {clusters.map((cluster) => {
               const hovered = hoveredClusterId === cluster.clusterId;
-              const style = getClusterVisualStyle(cluster, pixelWorld, hovered);
+              const style = getClusterVisualStyle(cluster, pixelWorld, hovered, palette);
               return (
                 <g
                   key={cluster.id}
@@ -1661,7 +1672,7 @@ export function AtlasCanvas({
         {lod !== "points" && clusters.length > 0 && clusterLayerOpacity > 0 ? (
           <g data-atlas-layer="cluster-hit-targets">
             {clusters.map((cluster) => {
-              const style = getClusterVisualStyle(cluster, pixelWorld, false);
+              const style = getClusterVisualStyle(cluster, pixelWorld, false, palette);
               return (
                 <circle
                   key={`${cluster.id}-hit`}
