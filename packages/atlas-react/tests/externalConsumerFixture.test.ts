@@ -47,10 +47,10 @@ describe("external atlas consumer fixture", () => {
     );
 
     expect(rootReadme).toContain(
-      '--graph-selector=\'[data-testid="semantic-atlas-map"]\'',
+      '--graph-selector=\'[data-testid="atlas-canvas"]\'',
     );
     expect(fixtureReadme).toContain(
-      '--graph-selector=\'[data-testid="semantic-atlas-map"]\'',
+      '--graph-selector=\'[data-testid="atlas-canvas"]\'',
     );
     expect(fixtureReadme).toContain("--interaction=wheel-pan");
     expect(fixtureReadme).toContain("--overlay-selector");
@@ -87,7 +87,7 @@ describe("external atlas consumer fixture", () => {
 
     expect(component).toContain("type CSSProperties");
     expect(component).toContain("rootStyle");
-    expect(canvas).toContain("CANVAS_ROOT_STYLE");
+    expect(canvas).toContain("CANVAS_ROOT_BASE_STYLE");
     expect(canvas).toContain("CANVAS_TEXTURE_STYLE");
     expect(canvas).toContain("CANVAS_SVG_STYLE");
   });

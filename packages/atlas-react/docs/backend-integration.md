@@ -133,7 +133,7 @@ Generic graph surface (any host URL):
 npx ui-graph-evaluator \
   --url=http://127.0.0.1:4173 \
   --root-selector='[data-testid="consumer-root"]' \
-  --graph-selector='[data-testid="semantic-atlas-map"]' \
+  --graph-selector='[data-testid="atlas-canvas"]' \
   --overlay-selector='[data-atlas-kind="density-label"]' \
   --interaction=wheel-pan \
   --gate

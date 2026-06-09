@@ -118,6 +118,27 @@ export const ATLAS_VISUAL_CONFIG = {
   },
 } as const;
 
+export type AtlasThemePalette = Partial<{
+  [Key in keyof typeof ATLAS_VISUAL_CONFIG.palette]: string;
+}>;
+
+export type AtlasPalette = {
+  [Key in keyof typeof ATLAS_VISUAL_CONFIG.palette]: string;
+};
+
+export function resolveAtlasPalette(
+  overrides?: AtlasThemePalette,
+): AtlasPalette {
+  if (!overrides) {
+    return { ...ATLAS_VISUAL_CONFIG.palette };
+  }
+  return { ...ATLAS_VISUAL_CONFIG.palette, ...overrides };
+}
+
+function paletteOrDefault(palette?: AtlasPalette): AtlasPalette {
+  return palette ?? resolveAtlasPalette();
+}
+
 export type LodBlend = {
   clusters: number;
   density: number;
@@ -196,8 +217,13 @@ export function displayZoomToAtlasZoom(displayZoom: number): number {
   return clampAtlasZoom(config.min + normalized * (config.max - config.min));
 }
 
-export function rgbaCssFromHex(hex: string | undefined, alpha: number): string {
-  const normalized = (hex ?? ATLAS_VISUAL_CONFIG.palette.fallback).replace("#", "");
+export function rgbaCssFromHex(
+  hex: string | undefined,
+  alpha: number,
+  palette?: AtlasPalette,
+): string {
+  const resolved = paletteOrDefault(palette);
+  const normalized = (hex ?? resolved.fallback).replace("#", "");
   const value =
     normalized.length === 3
       ? normalized
@@ -237,7 +263,11 @@ export function getLodBlend(zoom: number): LodBlend {
   };
 }
 
-export function getPointVisualStyle(input: PointVisualInput): PointVisualStyle {
+export function getPointVisualStyle(
+  input: PointVisualInput,
+  palette?: AtlasPalette,
+): PointVisualStyle {
+  const resolved = paletteOrDefault(palette);
   const importance = clamp(input.importance, 0, 1);
   const config = ATLAS_VISUAL_CONFIG.points;
   const basePx =
@@ -265,15 +295,15 @@ export function getPointVisualStyle(input: PointVisualInput): PointVisualStyle {
   const opacity = clamp(baseOpacity * (input.transitionOpacity ?? 1), 0, 1);
 
   return {
-    fillColor: rgbaCssFromHex(input.colorKey, opacity),
+    fillColor: rgbaCssFromHex(input.colorKey, opacity, resolved),
     haloOpacity: input.selected ? 0.24 : input.hovered ? 0.14 : 0,
     haloRadius: input.pixelWorld * basePx * stateScale * 2.15,
     opacity,
     radius: input.pixelWorld * basePx * stateScale,
     strokeColor: input.selected
-      ? rgbaCssFromHex(ATLAS_VISUAL_CONFIG.palette.selectedStroke, 0.72)
+      ? rgbaCssFromHex(resolved.selectedStroke, 0.72, resolved)
       : input.hovered
-        ? rgbaCssFromHex(ATLAS_VISUAL_CONFIG.palette.hoverStroke, 0.44)
+        ? rgbaCssFromHex(resolved.hoverStroke, 0.44, resolved)
         : "transparent",
     strokeWidth: input.selected
       ? config.selectedStrokePx
@@ -286,7 +316,9 @@ export function getPointVisualStyle(input: PointVisualInput): PointVisualStyle {
 export function getDensityVisualStyle(
   sample: DensitySampleLike,
   pixelWorld: number,
+  palette?: AtlasPalette,
 ): DensityVisualStyle {
+  const resolved = paletteOrDefault(palette);
   const weight = Math.sqrt(clamp(sample.weight, 0, 1));
   const config = ATLAS_VISUAL_CONFIG.density;
   const corePx = config.coreMinPx + weight * (config.coreMaxPx - config.coreMinPx);
@@ -294,9 +326,9 @@ export function getDensityVisualStyle(
   const haloAlpha = config.haloAlphaMin + weight * (config.haloAlphaMax - config.haloAlphaMin);
 
   return {
-    coreColor: rgbaCssFromHex(sample.colorKey, coreAlpha),
+    coreColor: rgbaCssFromHex(sample.colorKey, coreAlpha, resolved),
     coreRadius: pixelWorld * corePx,
-    haloColor: rgbaCssFromHex(sample.colorKey, haloAlpha),
+    haloColor: rgbaCssFromHex(sample.colorKey, haloAlpha, resolved),
     haloRadius: pixelWorld * corePx * config.haloScale,
   };
 }
@@ -305,6 +337,7 @@ export function getClusterVisualStyle(
   cluster: AtlasCluster,
   pixelWorld: number,
   hovered = false,
+  palette?: AtlasPalette,
 ): {
   centerColor: string;
   centerRadius: number;
@@ -315,6 +348,7 @@ export function getClusterVisualStyle(
   strokeColor: string;
   strokeWidth: number;
 } {
+  const resolved = paletteOrDefault(palette);
   const countScale = clamp(Math.log10(cluster.pointCount + 10) / 4.2, 0, 1);
   const radiusPx =
     ATLAS_VISUAL_CONFIG.clusters.bubbleMinPx +
@@ -332,6 +366,7 @@ export function getClusterVisualStyle(
       hovered
         ? ATLAS_VISUAL_CONFIG.clusters.centerAlpha + 0.12
         : ATLAS_VISUAL_CONFIG.clusters.centerAlpha,
+      resolved,
     ),
     centerRadius: Math.max(pixelWorld * 3.2, worldRadius * 0.06),
     fillColor: rgbaCssFromHex(
@@ -339,12 +374,14 @@ export function getClusterVisualStyle(
       hovered
         ? ATLAS_VISUAL_CONFIG.clusters.hoverFillAlpha
         : ATLAS_VISUAL_CONFIG.clusters.fillAlpha,
+      resolved,
     ),
     haloColor: rgbaCssFromHex(
       cluster.colorKey,
       hovered
         ? ATLAS_VISUAL_CONFIG.clusters.haloAlpha * 1.8
         : ATLAS_VISUAL_CONFIG.clusters.haloAlpha,
+      resolved,
     ),
     haloRadius: worldRadius * (hovered ? 1.55 : 1.38),
     radius: worldRadius,
@@ -353,6 +390,7 @@ export function getClusterVisualStyle(
       hovered
         ? ATLAS_VISUAL_CONFIG.clusters.hoverStrokeAlpha
         : ATLAS_VISUAL_CONFIG.clusters.strokeAlpha,
+      resolved,
     ),
     strokeWidth: hovered ? 1.45 : 0.9,
   };

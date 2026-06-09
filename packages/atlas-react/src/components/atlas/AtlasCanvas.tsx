@@ -7,10 +7,15 @@ import {
   useState,
   type CSSProperties,
   type Dispatch,
+  type KeyboardEvent,
   type PointerEvent,
   type SetStateAction,
   type WheelEvent,
 } from "react";
+import {
+  ATLAS_DEFAULT_WORLD_BOUNDS,
+  type AtlasWorldBounds,
+} from "../../contract/atlasStore";
 import {
   densityTilesToSamples,
   type DensitySample,
@@ -28,6 +33,7 @@ import type {
 import {
   ATLAS_VISUAL_CONFIG,
   clampAtlasZoom,
+  type AtlasPalette,
   getClusterVisualStyle,
   getContourVisualStyle,
   getDensityVisualStyle,
@@ -38,6 +44,7 @@ import {
   selectDensityLabels,
 } from "../../lib/atlas/visualConfig";
 import type { AtlasViewportState, LayerToggles } from "./atlasComponentTypes";
+import { viewSpanForWorldBounds } from "./viewportBounds";
 
 type AtlasTargetMarker = {
   id: string;
@@ -57,11 +64,14 @@ type AtlasCanvasProps = {
   onHoverPoint: (point: AtlasPoint | null) => void;
   onSelectCluster: (cluster: AtlasCluster) => void;
   onSelectPoint: (point: AtlasPoint) => void;
+  palette?: AtlasPalette;
   points: AtlasPoint[];
+  renderedCount?: number;
   selectedEntityId: string | null;
   setViewport: Dispatch<SetStateAction<AtlasViewportState>>;
   targetMarker: AtlasTargetMarker | null;
   viewport: AtlasViewportState;
+  worldBounds?: AtlasWorldBounds;
 };
 
 type AtlasContourPath = {
@@ -129,8 +139,7 @@ type CanvasTransform = {
   scale: number;
 };
 
-const CANVAS_ROOT_STYLE: CSSProperties = {
-  background: ATLAS_VISUAL_CONFIG.palette.paper,
+const CANVAS_ROOT_BASE_STYLE: CSSProperties = {
   inset: 0,
   overflow: "hidden",
   position: "absolute",
@@ -210,9 +219,10 @@ function atlasTextureColor(
   colorKey: string | undefined,
   random: () => number,
   neutralRate: number,
+  fallback: string,
 ): string {
   if (random() > neutralRate) {
-    return colorKey ?? ATLAS_VISUAL_CONFIG.palette.fallback;
+    return colorKey ?? fallback;
   }
 
   const neutralPalette = [
@@ -277,11 +287,6 @@ function drawTextureDot(
   context.beginPath();
   context.arc(x, y, radius, 0, Math.PI * 2);
   context.fill();
-}
-
-function viewSpanForZoom(zoom: number): { spanX: number; spanY: number } {
-  const nextSpanX = 15 / Math.pow(1.32, zoom);
-  return { spanX: nextSpanX, spanY: nextSpanX * 0.72 };
 }
 
 function buildBlobPath(input: {
@@ -429,6 +434,7 @@ function buildClusterContours(clusters: AtlasCluster[]): AtlasContourPath[] {
 function buildDensityStipple(
   samples: DensitySample[],
   pixelWorld: number,
+  palette: AtlasPalette,
 ): AtlasDensityStipplePoint[] {
   const groups = new Map<
     string,
@@ -558,7 +564,7 @@ function buildDensityStipple(
       const noiseY = randomNormal(random) * pixelWorld * 3.2 + Math.sin(dustAngle) * dust;
 
       points.push({
-        colorKey: atlasTextureColor(lobe.colorKey, random, 0.32),
+        colorKey: atlasTextureColor(lobe.colorKey, random, 0.32, palette.fallback),
         id: `${key}-stipple-${index}`,
         opacity: 0.26 + Math.min(0.48, Math.sqrt(group.score) * 0.052) + random() * 0.16,
         radius: pixelWorld * (0.13 + random() * 0.31),
@@ -588,7 +594,7 @@ function buildDensityStipple(
         const localX = clampNumber(randomNormal(sampleRandom), -2.4, 2.4) * sampleRx;
         const localY = clampNumber(randomNormal(sampleRandom), -2.2, 2.2) * sampleRy;
         points.push({
-          colorKey: atlasTextureColor(sample.colorKey, sampleRandom, 0.28),
+          colorKey: atlasTextureColor(sample.colorKey, sampleRandom, 0.28, palette.fallback),
           id: `${sample.id}-micro-${sampleIndex}`,
           opacity:
             0.28 +
@@ -649,7 +655,7 @@ function buildDensityStipple(
         : sample.y * (1 - centerPull) + centerY * centerPull;
 
       points.push({
-        colorKey: atlasTextureColor(sample.colorKey, ambientRandom, 0.74),
+        colorKey: atlasTextureColor(sample.colorKey, ambientRandom, 0.74, palette.fallback),
         id: `density-ambient-${index}`,
         opacity: 0.11 + Math.min(0.19, Math.sqrt(sample.weight) * 0.05),
         radius: pixelWorld * (0.09 + ambientRandom() * 0.17),
@@ -702,7 +708,7 @@ function buildDensityStipple(
           interstitialRandom() < 0.5 ? firstSample.colorKey : secondSample.colorKey;
 
         points.push({
-          colorKey: atlasTextureColor(sourceColor, interstitialRandom, 0.82),
+          colorKey: atlasTextureColor(sourceColor, interstitialRandom, 0.82, palette.fallback),
           id: `density-interstitial-${index}`,
           opacity: 0.065 + interstitialRandom() * 0.11,
           radius: pixelWorld * (0.07 + interstitialRandom() * 0.15),
@@ -726,6 +732,7 @@ function buildPointContextStipple(
   points: RenderedAtlasPoint[],
   pixelWorld: number,
   lod: AtlasLodLayer,
+  palette: AtlasPalette,
 ): AtlasDensityStipplePoint[] {
   if (points.length === 0 || lod === "density") return [];
 
@@ -765,7 +772,7 @@ function buildPointContextStipple(
       const satelliteAngle = random() * Math.PI * 2;
 
       texturePoints.push({
-        colorKey: atlasTextureColor(point.colorKey, random, isClusterLod ? 0.18 : 0.12),
+        colorKey: atlasTextureColor(point.colorKey, random, isClusterLod ? 0.18 : 0.12, palette.fallback),
         id: `${point.entityId}-context-${index}`,
         opacity: isClusterLod
           ? 0.2 + importance * 0.22 + random() * 0.08
@@ -802,7 +809,7 @@ function buildPointContextStipple(
 
       texturePoints.push({
         colorKey:
-          start.colorKey ?? end.colorKey ?? ATLAS_VISUAL_CONFIG.palette.fallback,
+          start.colorKey ?? end.colorKey ?? palette.fallback,
         id: `cluster-bridge-${index}`,
         opacity: 0.08 + bridgeRandom() * 0.08,
         radius: pixelWorld * (0.08 + bridgeRandom() * 0.16),
@@ -920,6 +927,12 @@ function mapLabel(label: string, maxLength: number): string {
   return `${formatted.slice(0, maxLength - 3)}...`;
 }
 
+function clusterSelectLabel(cluster: AtlasCluster): string {
+  return cluster.label
+    ? `Select cluster: ${cluster.label}`
+    : `Select cluster ${cluster.clusterId}`;
+}
+
 export function AtlasCanvas({
   bbox,
   clusters,
@@ -931,11 +944,14 @@ export function AtlasCanvas({
   onHoverPoint,
   onSelectCluster,
   onSelectPoint,
+  palette = ATLAS_VISUAL_CONFIG.palette,
   points,
+  renderedCount,
   selectedEntityId,
   setViewport,
   targetMarker,
   viewport,
+  worldBounds = ATLAS_DEFAULT_WORLD_BOUNDS,
 }: AtlasCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -951,18 +967,40 @@ export function AtlasCanvas({
 
   const spanX = bbox.maxX - bbox.minX;
   const spanY = bbox.maxY - bbox.minY;
+  const rootStyle = useMemo<CSSProperties>(
+    () => ({
+      ...CANVAS_ROOT_BASE_STYLE,
+      background: palette.paper,
+    }),
+    [palette.paper],
+  );
+  const [surfaceFocused, setSurfaceFocused] = useState(false);
+  const interactiveRootStyle = useMemo<CSSProperties>(
+    () =>
+      surfaceFocused
+        ? {
+            ...rootStyle,
+            boxShadow: `inset 0 0 0 2px ${palette.selectedStroke}`,
+          }
+        : rootStyle,
+    [palette.selectedStroke, rootStyle, surfaceFocused],
+  );
+  const mapAriaLabel = useMemo(() => {
+    const count = renderedCount ?? points.length;
+    return `Semantic atlas map. ${count} points rendered. Use arrow keys to pan and plus or minus to zoom.`;
+  }, [points.length, renderedCount]);
   const pixelWorld = Math.max(spanX / 980, spanY / 720);
   const densityRegions = useMemo(
     () => buildDensityRegions(densitySamples, pixelWorld),
     [densitySamples, pixelWorld],
   );
   const densityStipple = useMemo(
-    () => buildDensityStipple(densitySamples, pixelWorld),
-    [densitySamples, pixelWorld],
+    () => buildDensityStipple(densitySamples, pixelWorld, palette),
+    [densitySamples, palette, pixelWorld],
   );
   const pointContextStipple = useMemo(
-    () => buildPointContextStipple(renderedPoints, pixelWorld, lod),
-    [lod, pixelWorld, renderedPoints],
+    () => buildPointContextStipple(renderedPoints, pixelWorld, lod, palette),
+    [lod, palette, pixelWorld, renderedPoints],
   );
   const contourPaths = useMemo(() => buildClusterContours(clusters), [clusters]);
   const layerOpacities = useMemo(
@@ -1061,7 +1099,7 @@ export function AtlasCanvas({
           y: point.y,
         });
         const radius = clampNumber(point.radius * transform.scale, 0.55, 2.5);
-        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity);
+        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity, palette);
         drawTextureDot(context, screen.x, screen.y, radius);
       }
       context.restore();
@@ -1077,7 +1115,7 @@ export function AtlasCanvas({
           x: sample.x,
           y: sample.y,
         });
-        const style = getDensityVisualStyle(sample, pixelWorld);
+        const style = getDensityVisualStyle(sample, pixelWorld, palette);
         const haloRadius = clampNumber(style.haloRadius * transform.scale, 3, 48);
         const coreRadius = clampNumber(style.coreRadius * transform.scale, 1, 13);
         const gradient = context.createRadialGradient(
@@ -1090,7 +1128,7 @@ export function AtlasCanvas({
         );
         gradient.addColorStop(0, style.coreColor);
         gradient.addColorStop(0.42, style.haloColor);
-        gradient.addColorStop(1, rgbaCssFromHex(sample.colorKey, 0));
+        gradient.addColorStop(1, rgbaCssFromHex(sample.colorKey, 0, palette));
         context.beginPath();
         context.fillStyle = gradient;
         context.arc(screen.x, screen.y, haloRadius, 0, Math.PI * 2);
@@ -1122,7 +1160,7 @@ export function AtlasCanvas({
           lod === "clusters" ? 0.45 : 0.48,
           lod === "clusters" ? 2.2 : 2,
         );
-        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity);
+        context.fillStyle = rgbaCssFromHex(point.colorKey, point.opacity, palette);
         drawTextureDot(context, screen.x, screen.y, radius);
       }
       context.restore();
@@ -1136,15 +1174,18 @@ export function AtlasCanvas({
       for (const point of renderedPoints) {
         const selected = point.entityId === selectedEntityId;
         const hovered = point.entityId === hoveredEntityId;
-        const style = getPointVisualStyle({
-          colorKey: point.colorKey,
-          hovered,
-          importance: point.importance,
-          lod,
-          pixelWorld,
-          selected,
-          transitionOpacity: point.renderOpacity ?? 1,
-        });
+        const style = getPointVisualStyle(
+          {
+            colorKey: point.colorKey,
+            hovered,
+            importance: point.importance,
+            lod,
+            pixelWorld,
+            selected,
+            transitionOpacity: point.renderOpacity ?? 1,
+          },
+          palette,
+        );
         const screen = projectWorldPoint({
           bbox,
           transform,
@@ -1159,7 +1200,7 @@ export function AtlasCanvas({
 
         if (style.haloOpacity > 0) {
           context.beginPath();
-          context.fillStyle = rgbaCssFromHex(point.colorKey, style.haloOpacity);
+          context.fillStyle = rgbaCssFromHex(point.colorKey, style.haloOpacity, palette);
           context.arc(screen.x, screen.y, radius * 2.4, 0, Math.PI * 2);
           context.fill();
         }
@@ -1190,6 +1231,7 @@ export function AtlasCanvas({
     layers.density,
     layers.points,
     lod,
+    palette,
     pixelWorld,
     pointContextStipple,
     pointLayerOpacity,
@@ -1283,7 +1325,7 @@ export function AtlasCanvas({
           x: pointerX,
           y: pointerY,
         });
-        const nextSpan = viewSpanForZoom(nextZoom);
+        const nextSpan = viewSpanForWorldBounds(nextZoom, worldBounds);
         const nextTransform = canvasTransform(
           { height: rect.height, width: rect.width },
           nextSpan.spanX,
@@ -1366,11 +1408,66 @@ export function AtlasCanvas({
     }
   }
 
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    const panKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"] as const;
+    const isPan = panKeys.includes(event.key as (typeof panKeys)[number]);
+    const isZoomIn = event.key === "+" || event.key === "=";
+    const isZoomOut = event.key === "-";
+
+    if (!isPan && !isZoomIn && !isZoomOut) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isPan) {
+      const panStepX = spanX * 0.08;
+      const panStepY = spanY * 0.08;
+      setViewport((current) => ({
+        ...current,
+        centerX: Number(
+          (
+            current.centerX +
+            (event.key === "ArrowRight"
+              ? panStepX
+              : event.key === "ArrowLeft"
+                ? -panStepX
+                : 0)
+          ).toFixed(4),
+        ),
+        centerY: Number(
+          (
+            current.centerY +
+            (event.key === "ArrowDown"
+              ? panStepY
+              : event.key === "ArrowUp"
+                ? -panStepY
+                : 0)
+          ).toFixed(4),
+        ),
+      }));
+      return;
+    }
+
+    setViewport((current) => ({
+      ...current,
+      zoom: clampAtlasZoom(current.zoom + (isZoomIn ? 0.35 : -0.35)),
+    }));
+  }
+
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 overflow-hidden bg-[#efefec]"
+      aria-label={mapAriaLabel}
+      className="absolute inset-0 overflow-hidden"
       data-testid="atlas-canvas"
+      onBlur={() => setSurfaceFocused(false)}
+      onFocus={() => setSurfaceFocused(true)}
+      onKeyDown={handleKeyDown}
       onPointerCancel={handlePointerUp}
       onPointerDown={handlePointerDown}
       onPointerLeave={() => {
@@ -1379,7 +1476,9 @@ export function AtlasCanvas({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onWheel={handleWheel}
-      style={CANVAS_ROOT_STYLE}
+      role="application"
+      style={interactiveRootStyle}
+      tabIndex={0}
     >
       <div
         className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.62),transparent_42%)]"
@@ -1397,11 +1496,9 @@ export function AtlasCanvas({
         style={CANVAS_TEXTURE_STYLE}
       />
       <svg
-        aria-label="Semantic atlas map"
         className="absolute inset-0 z-[3] h-full w-full cursor-grab touch-none active:cursor-grabbing"
         data-testid="atlas-overlay"
         preserveAspectRatio="xMidYMid slice"
-        role="img"
         style={CANVAS_SVG_STYLE}
         viewBox={`${bbox.minX} ${bbox.minY} ${spanX} ${spanY}`}
       >
@@ -1444,6 +1541,7 @@ export function AtlasCanvas({
                   stroke={rgbaCssFromHex(
                     region.colorKey,
                     ATLAS_VISUAL_CONFIG.regions.outerStrokeAlpha,
+                    palette,
                   )}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1455,10 +1553,12 @@ export function AtlasCanvas({
                   fill={rgbaCssFromHex(
                     region.colorKey,
                     ATLAS_VISUAL_CONFIG.regions.fillAlpha,
+                    palette,
                   )}
                   stroke={rgbaCssFromHex(
                     region.colorKey,
                     ATLAS_VISUAL_CONFIG.regions.strokeAlpha,
+                    palette,
                   )}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1510,6 +1610,7 @@ export function AtlasCanvas({
                   branch.colorKey,
                   ATLAS_VISUAL_CONFIG.branches.alpha *
                     (0.55 + branch.importance * 0.45),
+                  palette,
                 )}
                 strokeLinecap="round"
                 strokeWidth={ATLAS_VISUAL_CONFIG.branches.widthPx}
@@ -1523,10 +1624,11 @@ export function AtlasCanvas({
           <g data-atlas-layer="clusters" opacity={clusterLayerOpacity}>
             {clusters.map((cluster) => {
               const hovered = hoveredClusterId === cluster.clusterId;
-              const style = getClusterVisualStyle(cluster, pixelWorld, hovered);
+              const style = getClusterVisualStyle(cluster, pixelWorld, hovered, palette);
               return (
                 <g
                   key={cluster.id}
+                  aria-hidden="true"
                   data-atlas-cluster-id={cluster.clusterId}
                   data-atlas-kind="cluster"
                   onClick={(event) => {
@@ -1579,19 +1681,30 @@ export function AtlasCanvas({
         {lod !== "points" && clusters.length > 0 && clusterLayerOpacity > 0 ? (
           <g data-atlas-layer="cluster-hit-targets">
             {clusters.map((cluster) => {
-              const style = getClusterVisualStyle(cluster, pixelWorld, false);
+              const style = getClusterVisualStyle(cluster, pixelWorld, false, palette);
               return (
                 <circle
                   key={`${cluster.id}-hit`}
+                  aria-label={clusterSelectLabel(cluster)}
                   cx={cluster.centroidX}
                   cy={cluster.centroidY}
                   data-atlas-cluster-id={cluster.clusterId}
                   data-atlas-kind="cluster-hit"
                   fill="rgba(15, 23, 42, 0.001)"
                   pointerEvents="all"
+                  role="button"
                   r={style.radius}
                   stroke="transparent"
+                  tabIndex={0}
                   onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectCluster(cluster);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") {
+                      return;
+                    }
+                    event.preventDefault();
                     event.stopPropagation();
                     onSelectCluster(cluster);
                   }}
@@ -1656,7 +1769,7 @@ export function AtlasCanvas({
                 fontSize={densityLabelSize}
                 fontWeight={650}
                 paintOrder="stroke"
-                stroke={ATLAS_VISUAL_CONFIG.palette.labelHalo}
+                stroke={palette.labelHalo}
                 strokeWidth={densityLabelSize * 0.18}
                 textAnchor="middle"
                 x={label.x}
@@ -1688,7 +1801,7 @@ export function AtlasCanvas({
                 fontSize={clusterLabelSize}
                 fontWeight={650}
                 paintOrder="stroke"
-                stroke={ATLAS_VISUAL_CONFIG.palette.labelHalo}
+                stroke={palette.labelHalo}
                 strokeWidth={clusterLabelSize * 0.18}
                 textAnchor="middle"
                 x={cluster.centroidX}
