@@ -136,6 +136,27 @@ describe("atlas contract runtime", () => {
     expect(clusters.map((cluster) => cluster.pointCount)).toEqual([1, 1]);
   });
 
+  it("rejects aggregate points outside the configured worldBounds", () => {
+    expect(() =>
+      aggregateClusters(
+        [
+          {
+            clusterId: "outside",
+            colorKey: "#2563eb",
+            entityId: "outside-1",
+            entityType: "document",
+            importance: 0.6,
+            label: "Outside",
+            viewId: "fixture",
+            x: 2,
+            y: 0.5,
+          },
+        ],
+        { worldBounds: ATLAS_UNIT_WORLD_BOUNDS },
+      ),
+    ).toThrow("outside worldBounds");
+  });
+
   it("aggregates large clusters without spreading coordinates into Math.min/max", () => {
     const points: AtlasPoint[] = Array.from({ length: 70_000 }, (_, index) => ({
       clusterId: "large",

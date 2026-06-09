@@ -78,6 +78,23 @@ function assertWorldBounds(worldBounds: AtlasWorldBounds): AtlasWorldBounds {
   return worldBounds;
 }
 
+function assertPointWithinWorldBounds(
+  point: AtlasPoint,
+  worldBounds: AtlasWorldBounds,
+): void {
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    throw new Error("Atlas point coordinates must be finite numbers.");
+  }
+  if (
+    point.x < worldBounds.minX ||
+    point.x > worldBounds.maxX ||
+    point.y < worldBounds.minY ||
+    point.y > worldBounds.maxY
+  ) {
+    throw new Error(`Atlas point ${point.entityId} is outside worldBounds.`);
+  }
+}
+
 function tileIndex(
   coordinate: number,
   min: number,
@@ -98,7 +115,9 @@ export function aggregateClusters(
   options ??= {};
   const lodLevel = options.lodLevel ?? 1;
   const minRadius = options.minRadius ?? DEFAULT_MIN_CLUSTER_RADIUS;
-  assertWorldBounds(options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS);
+  const worldBounds = assertWorldBounds(
+    options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
+  );
   if (!Number.isInteger(lodLevel) || lodLevel < 0) {
     throw new Error("lodLevel must be a non-negative integer.");
   }
@@ -108,6 +127,7 @@ export function aggregateClusters(
 
   const groups = new Map<string, AtlasPoint[]>();
   for (const point of points) {
+    assertPointWithinWorldBounds(point, worldBounds);
     const viewId = viewIdFor(point, options.viewId);
     const key = JSON.stringify([viewId, point.clusterId]);
     const group = groups.get(key);

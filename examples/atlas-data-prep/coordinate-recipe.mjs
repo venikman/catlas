@@ -209,17 +209,13 @@ export function runCoordinateRecipe(input = {}) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const result = runCoordinateRecipe();
   console.log(
-    JSON.stringify(
-      {
-        clusters: result.clusters.length,
-        densityTiles: result.densityTiles.length,
-        method: result.method,
-        ok: true,
-        points: result.points.length,
-        worldBounds: result.worldBounds,
-      },
-      null,
-      2,
-    ),
+    `ATLAS_DATA_PREP_SUMMARY ${JSON.stringify({
+      clusters: result.clusters.length,
+      densityTiles: result.densityTiles.length,
+      method: result.method,
+      ok: true,
+      points: result.points.length,
+      worldBounds: result.worldBounds,
+    })}`,
   );
 }

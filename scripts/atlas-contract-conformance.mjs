@@ -1,12 +1,5 @@
 import { execFileSync } from "node:child_process";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +11,8 @@ import {
 } from "@catlas/atlas-react/contract";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const DATA_PREP_SUMMARY_PREFIX = "ATLAS_DATA_PREP_SUMMARY ";
 
 function log(message) {
   console.log(`[atlas-conformance] ${message}`);
@@ -62,7 +57,7 @@ function assertParameterizedDensity() {
 
 function runDataPrepRecipe() {
   const output = execFileSync(
-    "npm",
+    npmCommand,
     ["run", "conformance", "-w", "examples/atlas-data-prep"],
     {
       cwd: repoRoot,
@@ -71,9 +66,11 @@ function runDataPrepRecipe() {
     },
   );
 
-  const summaryStart = output.indexOf("{");
-  assert(summaryStart >= 0, "atlas-data-prep did not print a JSON summary");
-  const summary = JSON.parse(output.slice(summaryStart));
+  const summaryLine = output
+    .split(/\r?\n/)
+    .find((line) => line.startsWith(DATA_PREP_SUMMARY_PREFIX));
+  assert(summaryLine, "atlas-data-prep did not print a JSON summary");
+  const summary = JSON.parse(summaryLine.slice(DATA_PREP_SUMMARY_PREFIX.length));
   assert(summary.ok === true, "atlas-data-prep summary was not ok");
   assert(summary.points > 0, "atlas-data-prep produced no points");
   log("plain JavaScript data-prep recipe validated");
@@ -91,23 +88,50 @@ function packAndImportOutsideRepo() {
       "atlas-react",
     );
     mkdirSync(packDir, { recursive: true });
-    mkdirSync(join(consumerDir, "node_modules", "@catlas"), { recursive: true });
+    mkdirSync(consumerDir, { recursive: true });
 
     const packOutput = execFileSync(
-      "npm",
-      ["pack", "--workspace", "@catlas/atlas-react", "--pack-destination", packDir],
+      npmCommand,
+      [
+        "pack",
+        "--json",
+        "--workspace",
+        "@catlas/atlas-react",
+        "--pack-destination",
+        packDir,
+      ],
       { cwd: repoRoot, encoding: "utf8" },
-    ).trim();
-    const tarball = join(packDir, packOutput.split("\n").at(-1));
+    );
+    const packEntries = JSON.parse(packOutput);
+    const filename = packEntries.at(-1)?.filename;
+    assert(filename, "npm pack --json did not return a tarball filename");
+    const tarball = join(packDir, filename);
 
-    execFileSync("tar", ["-xzf", tarball, "-C", tempRoot], {
-      cwd: repoRoot,
-      stdio: "ignore",
-    });
-    renameSync(join(tempRoot, "package"), scopedPackageDir);
     writeFileSync(
       join(consumerDir, "package.json"),
-      JSON.stringify({ private: true, type: "module" }, null, 2),
+      JSON.stringify(
+        {
+          dependencies: {
+            "@catlas/atlas-react": tarball,
+          },
+          private: true,
+          type: "module",
+        },
+        null,
+        2,
+      ),
+    );
+    execFileSync(
+      npmCommand,
+      [
+        "install",
+        "--ignore-scripts",
+        "--package-lock=false",
+        "--no-audit",
+        "--no-fund",
+        "--legacy-peer-deps",
+      ],
+      { cwd: consumerDir, stdio: "ignore" },
     );
 
     const packageJsonPath = join(scopedPackageDir, "package.json");
