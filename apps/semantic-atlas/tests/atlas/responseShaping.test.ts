@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { AtlasCluster, AtlasPoint } from "@/lib/atlas/types";
+import type {
+  AtlasCluster,
+  AtlasEntityDetails,
+  AtlasPoint,
+} from "@/lib/atlas/types";
 import {
   isTruncated,
   lightweightCluster,
+  lightweightEntity,
   lightweightPoint,
   truncateAtlasLabel,
 } from "@/lib/atlas/responseShaping";
@@ -79,5 +84,67 @@ describe("atlas response shaping", () => {
   it("marks full limit responses as possibly truncated", () => {
     expect(isTruncated(5000, 5000)).toBe(true);
     expect(isTruncated(4999, 5000)).toBe(false);
+  });
+});
+
+function entity(overrides: Partial<AtlasEntityDetails> = {}): AtlasEntityDetails {
+  return {
+    entityId: "entity-1",
+    label: "x".repeat(140),
+    entityType: "Paper",
+    payloadSummary: "summary text",
+    metadata: { safe: "ok", secret: "ssn-123" },
+    views: [
+      {
+        viewId: "view-1",
+        viewSlug: "research-domains",
+        x: 1.123456,
+        y: 2.987654,
+        clusterId: "cluster-1",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("lightweightEntity", () => {
+  it("truncates the label and rounds view coordinates", () => {
+    const shaped = lightweightEntity(entity());
+
+    expect(shaped.label).toHaveLength(96);
+    expect(shaped.views[0].x).toBe(1.1235);
+    expect(shaped.views[0].y).toBe(2.9877);
+  });
+
+  it("passes metadata and payloadSummary through by default", () => {
+    const shaped = lightweightEntity(entity());
+
+    expect(shaped.metadata).toEqual({ safe: "ok", secret: "ssn-123" });
+    expect(shaped.payloadSummary).toBe("summary text");
+  });
+
+  it("whitelists metadata keys when given an allow-list", () => {
+    const shaped = lightweightEntity(entity(), { metadataAllowList: ["safe"] });
+
+    expect(shaped.metadata).toEqual({ safe: "ok" });
+    expect(shaped.metadata.secret).toBeUndefined();
+  });
+
+  it("drops payloadSummary when includePayloadSummary is false", () => {
+    const shaped = lightweightEntity(entity(), { includePayloadSummary: false });
+
+    expect(shaped.payloadSummary).toBe("");
+  });
+
+  it("is defensive against a store returning null views/metadata", () => {
+    const shaped = lightweightEntity(
+      entity({
+        views: undefined as unknown as AtlasEntityDetails["views"],
+        metadata: undefined as unknown as AtlasEntityDetails["metadata"],
+      }),
+    );
+
+    expect(shaped.views).toEqual([]);
+    expect(shaped.metadata).toEqual({});
   });
 });

@@ -32,7 +32,7 @@ import type {
 } from "../lib/atlas/types";
 
 /** Bump on any breaking change to the shapes, the store interface, or the selector contract. */
-export const ATLAS_CONTRACT_VERSION = "0.1.0" as const;
+export const ATLAS_CONTRACT_VERSION = "0.2.0" as const;
 
 export type AtlasStats = {
   /** Implementation-defined; reference uses "postgres" | "demo" | "unavailable". */
@@ -74,6 +74,13 @@ export interface AtlasStore {
    */
   getEntity(entityId: string): Promise<AtlasEntityDetails | null>;
   search(input: AtlasSearchQuery): Promise<AtlasSearchResult[]>;
+  /**
+   * Optional readiness check. The recommended routes call this before querying and
+   * 503 cleanly when it returns false. A store that is always reachable omits it —
+   * the route helper defaults to `true` — so swapping only `getAtlasStore()` is enough
+   * and a custom store is never gated by the reference `DATABASE_URL`. (Added in 0.2.0.)
+   */
+  isAvailable?(): boolean;
 }
 
 /**
