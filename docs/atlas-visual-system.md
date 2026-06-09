@@ -59,7 +59,7 @@ The current label helpers sort by importance and suppress collisions. Label coun
 The Nomic target is scoped to the map/graph surface only, not the app header, sidebar, search palette, or tooling chrome. Use the generic UI graph evaluator against the map container with a captured Nomic map-only image:
 
 ```bash
-node packages/ui-graph-evaluator/dist/benchmarks/run-ui-evaluator.js \
+node packages/ui-graph-evaluator/dist/run-ui-evaluator.js \
   --url=http://localhost:3002 \
   --root-selector='[data-testid="atlas-root"]' \
   --graph-selector='[data-testid="atlas-canvas"]' \

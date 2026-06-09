@@ -101,8 +101,9 @@ npm run bench:atlas:quick -- --start-server --gate
 ## Output
 
 Report: the commands run, the report paths
-(`benchmarks/results/ui-evaluator-latest.json`, `benchmarks/results/latest.json`
-/ `latest.md`), a pass/warn/fail/skip interpretation, the finding IDs that
+(UI evaluator → `benchmarks/results/ui-evaluator-latest.json`; atlas benchmark
+runner → `outputs/atlas-benchmarks/latest.json` / `latest.md`), a
+pass/warn/fail/skip interpretation, the finding IDs that
 gate the claimed maturity level (e.g. `renderer-point-elements` and
 `runtime-test-hook` for M1; the bounded-API source-invariant subset for M2), and
 the highest maturity level the evidence actually supports.

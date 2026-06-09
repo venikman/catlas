@@ -1,5 +1,7 @@
 # Semantic Atlas Production Notes
 
+> **Scope:** This guide covers the reference app `apps/semantic-atlas/`. Operational commands (`npm run dev`, `atlas:smoke`, `generate:atlas`, `seed:atlas`, `db:migrate`, `atlas:analyze-queries`, …) and code/SQL paths such as `lib/atlas/*` and `migrations/*` are relative to `apps/semantic-atlas/` — run them from there, or prefix scripts with `-w @catlas/semantic-atlas` from the repo root. Benchmark tooling lives in `packages/atlas-benchmarks/`.
+
 ## Current Performance Model
 
 Semantic Atlas is LOD-first. The API must never transfer the whole corpus for a viewport. Each zoom band maps to a bounded endpoint:

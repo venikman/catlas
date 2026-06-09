@@ -43,7 +43,7 @@ Changing any of these is a contract change → bump the version, notify all owne
 | **Devin** | Docs + packaging reconciliation + plan rewrite | `docs/*`, `packages/atlas-react/docs/backend-integration.md`, all `package.json` packaging fields, the plan doc |
 
 ### Claude Code
-- **Modular boundary (D2/D3):** extract `db.ts`'s 7 functions behind `AtlasStore`; ship `PostgresAtlasStore` + `DemoAtlasStore` + a recommended `createAtlasRoutes({ store })`; routes call a store, not `db.ts` directly.
+- **Modular boundary (D2/D3):** extract `db.ts`'s 7 functions behind `AtlasStore`; ship a single `referenceAtlasStore` (Postgres + demo data modes) selected via `getAtlasStore()`; `createAtlasRoutes({ store })` remains the recommended next-step helper; routes read through the store, not `db.ts` directly.
 - **Field boundary (`sec-1`):** add a serving-layer `lightweightEntity()` projection (mirrors `lightweightPoint`/`lightweightCluster`; **not** an `AtlasStore` method) that trims the response; document the entity route is anonymous + cacheable (set TTL/field set per D1).
 - **Bounded search (`sec-2`):** cap candidate scan; flag short-query trigram degradation.
 - **Gate trust + teach (`testing-2/3/6`, `bench-*`):** unit-test validators / `summarize()` / `percentiles()` / `findings.ts`; add per-check `rationale/fix/docRef`; label load-bearing vs advisory.
@@ -97,7 +97,7 @@ Wave-1 slices and the Wave-2 hand-offs are all merged (below); the per-slice
 [`CLOUD-HANDOFF.md`](./CLOUD-HANDOFF.md) §5.2).
 
 Verified together after the #20 sync: `build:packages`, `typecheck`, all four test suites
-(ui-graph 6, atlas-benchmarks 25, atlas-react 49, semantic-atlas 20), `conformance`,
+(ui-graph 6, atlas-benchmarks 25, atlas-react 52, semantic-atlas 20), `conformance`,
 `smoke:pack`, and `npm publish --dry-run` all pass.
 
 - [x] **Wave 0** — contract pinned *(merged in #10)*

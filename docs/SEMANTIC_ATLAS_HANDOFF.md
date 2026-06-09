@@ -1,5 +1,7 @@
 # Semantic Atlas Handoff
 
+> **Scope:** This handoff covers the reference app `apps/semantic-atlas/`. Paths (`lib/atlas/*`, `app/api/atlas/*`, `migrations/*`) and scripts (`npm run dev`, `generate:atlas`, `seed:atlas`, `atlas:smoke`, …) are relative to `apps/semantic-atlas/`; run them from there or prefix with `-w @catlas/semantic-atlas` from the repo root.
+
 ## What Was Built
 
 This repository contains a verified first MVP prototype of Semantic Atlas as a Next.js 16 App Router application. The root route opens the atlas workspace directly, not a landing page.
@@ -77,7 +79,7 @@ Browser/runtime verification should confirm:
 - No framework overlay is visible.
 - The atlas renderer uses Canvas 2D plus SVG overlays, not WebGL.
 - `document.querySelector('[data-testid="atlas-map-canvas"]')` is present and nonblank.
-- `svg[aria-label="Semantic atlas map"]` is present.
+- The map surface (`[data-testid="atlas-canvas"]`) exposes an `aria-label` starting with `"Semantic atlas map"`. (The `<svg>` overlay element itself carries no `aria-label`; the accessible label lives on the canvas container.)
 - No fresh browser warning/error logs appear after reload.
 - Search result selection opens the inspector and switches to point LOD.
 - Mobile viewport has no horizontal overflow.

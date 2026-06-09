@@ -1,6 +1,6 @@
 # Catlas Adoption — Cloud Execution Handoff (M0 → M5)
 
-**Status:** Handoff brief · **Drives to:** M5 production readiness · **Contract:** `ATLAS_CONTRACT_VERSION = 0.1.0` · **Date:** 2026-06-08
+**Status:** Handoff brief · **Drives to:** M5 production readiness · **Contract:** `ATLAS_CONTRACT_VERSION = 0.2.0` · **Date:** 2026-06-08
 
 > **⚠️ Current state — read before executing.** Wave 0 and most of Wave 1 are **already merged to `main`**: the contract conformance runtime (#13), the `AtlasStore` boundary + routes (#14), the renderer adoption surface (#15), store-driven availability (#19), the `./contract` export fix (#18), and a `conformance + typecheck` CI gate (#22). **Do not re-create Wave 1 from scratch** — reconcile against current `main` and verify what already exists before branching. (PR #20 restarted Wave 1 from an older base and ended up conflicting across 12 files as a result.) Treat this brief as the guide for the **remaining** Wave 2 and M2–M5 work.
 
@@ -96,7 +96,7 @@ correctly, and operationally ready.
 **Done when:** §13's acceptance checklist is fully checked, every copyable command in the
 docs resolves, and `npm run validate` plus all three gates pass from a clean checkout.
 
-**Current state (2026-06-08, `main` @ `45c0cfd`).** Wave 0 and **all four Wave-1 slices have
+**Current state (2026-06-08).** Wave 0 and **all four Wave-1 slices have
 merged**: Devin's slice (#11), Codex's conformance kit + aggregation + `examples/atlas-data-prep`
 (`80b92ad`, contract export tidied in #18), Cursor's renderer adoption surface (#15), and Claude
 Code's modular `AtlasStore` (#14).
@@ -131,8 +131,8 @@ Full text: [`CONTRACT.md`](./CONTRACT.md). Executable source:
 Summary every slice codes against:
 
 - **D1 — Access control is upstream.** No auth inside the atlas layer; the host app authorizes the caller. The real protection is *which fields cross the boundary*.
-- **D2 — Data access is modular.** Adopters implement the `AtlasStore` interface against their own DB. Reference ships `PostgresAtlasStore` + `DemoAtlasStore`.
-- **D3 — HTTP serving is a recommendation.** Call the store directly or wrap it in `createAtlasRoutes({ store })`. Transport is the adopter's choice.
+- **D2 — Data access is modular.** Adopters implement the `AtlasStore` interface against their own DB. Reference ships a single `referenceAtlasStore` (Postgres + demo data modes), selected via `getAtlasStore()`.
+- **D3 — HTTP serving is a recommendation.** Call the store directly (the reference routes read through `getAtlasStore()`) or — once it ships — wrap it in the proposed `createAtlasRoutes({ store })` helper. Transport is the adopter's choice.
 
 **`AtlasStore` — 7 methods:** `getStats`, `listViews`, `listPoints(q)`, `listClusters(q)`,
 `listDensityTiles(q)`, `getEntity(id)`, `search(q)`. `listPoints/Clusters/DensityTiles`
@@ -193,9 +193,10 @@ this is what makes four agents safe at once.
 
 ### 5.2 Per-slice brief & "done when"
 
-**Claude Code.** Extract `db.ts`'s 7 functions behind `AtlasStore`; ship
-`PostgresAtlasStore` + `DemoAtlasStore` + recommended `createAtlasRoutes({ store })` (routes
-call a store, not `db.ts`). Add a serving-layer `lightweightEntity()` projection (mirrors
+**Claude Code.** Extract `db.ts`'s 7 functions behind `AtlasStore`; ship a single
+`referenceAtlasStore` (Postgres + demo data modes) selected via `getAtlasStore()`, with
+`createAtlasRoutes({ store })` as the recommended next-step helper (routes read through the
+store, not `db.ts`). Add a serving-layer `lightweightEntity()` projection (mirrors
 `lightweightPoint`/`lightweightCluster`; **not** an `AtlasStore` method) and document the
 entity route as anonymous + cacheable. Cap `search` candidate scan. Unit-test the
 validators / `summarize()` / `percentiles()` / `findings.ts`; add per-check
@@ -392,10 +393,10 @@ is committed before turning this into a hard gate (§12).
 (validate transformed rows pre-import), `catlas-evidence-pack` (bundle reports + screenshots
 + query plans + env summary for a PR).
 
-**Agent playbooks (`.cursor/skills/catlas-*/SKILL.md`)** — `catlas-adoption-scout`,
-`catlas-benchmark-gate`, `catlas-postgres-prep`, `catlas-styling-adapter`,
-`catlas-evidence-reviewer`. Each defines preconditions, allowed path globs, prohibited
-actions, stop conditions, and copy-paste validation commands.
+**Agent playbooks (`.cursor/skills/catlas-*/SKILL.md`)** — shipped: `catlas-adoption-scout`,
+`catlas-benchmark-gate`. Proposed (not yet authored): `catlas-postgres-prep`,
+`catlas-styling-adapter`, `catlas-evidence-reviewer`. Each shipped skill defines preconditions,
+allowed path globs, prohibited actions, stop conditions, and copy-paste validation commands.
 
 ---
 

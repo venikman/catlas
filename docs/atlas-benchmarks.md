@@ -6,6 +6,8 @@ It does not claim the app is "fast" without measurement. Each check is reported 
 
 ## How To Run
 
+> **Paths & commands in this guide are relative to the reference app `apps/semantic-atlas/`** (where the `dev`/`atlas:*`/`generate:atlas` scripts live). From the repo root, prefix app scripts with `-w @catlas/semantic-atlas`. The benchmark tooling source lives in `packages/atlas-benchmarks/src/`.
+
 For direct benchmark profile runs, start the atlas app first:
 
 ```bash
@@ -56,10 +58,10 @@ ATLAS_BASE_URL=http://localhost:3000 npm run bench:atlas:quick
 
 Every run writes:
 
-- `benchmarks/results/latest.json`
-- `benchmarks/results/latest.md`
+- `outputs/atlas-benchmarks/latest.json`
+- `outputs/atlas-benchmarks/latest.md`
 
-The JSON report is intended for CI. The Markdown report is intended for humans. Benchmark result artifacts are ignored by git except for `benchmarks/results/.gitkeep`.
+The JSON report is intended for CI. The Markdown report is intended for humans. Benchmark result artifacts under `outputs/` are ignored by git. (The portable UI graph evaluator writes separately to `benchmarks/results/ui-evaluator-latest.json`.)
 
 Reports include:
 
@@ -71,7 +73,7 @@ Reports include:
 
 ## Current Budgets
 
-Budgets are centralized in `benchmarks/budgets.ts` as `ATLAS_BUDGETS`. Each performance budget has a `good` threshold and a stricter `sota` target. The current validators use the `good` thresholds for compatibility, while the SOTA values are available for scorecard/reporting work.
+Budgets are centralized in `packages/atlas-benchmarks/src/budgets.ts` as `ATLAS_BUDGETS`. Each performance budget has a `good` threshold and a stricter `sota` target. The current validators use the `good` thresholds for compatibility, while the SOTA values are available for scorecard/reporting work.
 
 Page-level guardrails:
 
@@ -115,7 +117,7 @@ Payload and row caps:
 
 The first-pass gate also has explicit hard caps for payloads that should fail only when the architecture becomes unsafe: initial atlas API payload `<= 2 MB` and high-zoom point payload `<= 5 MB`. The stricter good/SOTA targets are reported as warnings or SOTA misses.
 
-Some compatibility values can be overridden through environment variables in `benchmarks/budgets.ts`.
+Some compatibility values can be overridden through environment variables in `packages/atlas-benchmarks/src/budgets.ts`.
 
 ## What The Validator Checks
 
@@ -194,6 +196,6 @@ The 10M readiness check intentionally avoids rendering or transferring 10M raw p
 
 ## Adding New Checks
 
-Add a validator under `benchmarks/validators/`, register it in `benchmarks/validators/index.ts`, and include it in the relevant profile in `benchmarks/benchmark.config.ts`.
+Add a validator under `packages/atlas-benchmarks/src/validators/`, register it in `packages/atlas-benchmarks/src/validators/index.ts`, and include it in the relevant profile in `packages/atlas-benchmarks/src/benchmark.config.ts`.
 
-Use `benchmarks/budgets.ts` for thresholds. If a budget depends on local hardware, report it as `WARN`; if a budget protects architecture or boundedness, report it as gate-blocking `FAIL`.
+Use `packages/atlas-benchmarks/src/budgets.ts` for thresholds. If a budget depends on local hardware, report it as `WARN`; if a budget protects architecture or boundedness, report it as gate-blocking `FAIL`.

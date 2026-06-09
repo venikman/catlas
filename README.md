@@ -25,7 +25,7 @@ npm run build -w @catlas/ui-graph-evaluator
 npx ui-graph-evaluator --url=http://127.0.0.1:4173 --gate
 ```
 
-Artifacts default to `outputs/ui-evaluator/` when `--artifacts` is set. See [`packages/ui-graph-evaluator/README.md`](packages/ui-graph-evaluator/README.md).
+The JSON report is written to `benchmarks/results/ui-evaluator-latest.json`; screenshot/video artifacts go to `benchmarks/results/ui-evaluator-artifacts/` when `--artifacts` is set. See [`packages/ui-graph-evaluator/README.md`](packages/ui-graph-evaluator/README.md).
 
 ### 1B: `@catlas/atlas-benchmarks`
 
