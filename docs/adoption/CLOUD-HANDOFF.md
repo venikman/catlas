@@ -2,6 +2,8 @@
 
 **Status:** Handoff brief · **Drives to:** M5 production readiness · **Contract:** `ATLAS_CONTRACT_VERSION = 0.1.0` · **Date:** 2026-06-08
 
+> **⚠️ Current state — read before executing.** Wave 0 and most of Wave 1 are **already merged to `main`**: the contract conformance runtime (#13), the `AtlasStore` boundary + routes (#14), the renderer adoption surface (#15), store-driven availability (#19), the `./contract` export fix (#18), and a `conformance + typecheck` CI gate (#22). **Do not re-create Wave 1 from scratch** — reconcile against current `main` and verify what already exists before branching. (PR #20 restarted Wave 1 from an older base and ended up conflicting across 12 files as a result.) Treat this brief as the guide for the **remaining** Wave 2 and M2–M5 work.
+
 This is the single, self-contained document you paste into a cloud (ultracode)
 workflow to take Catlas from its proven M0/M1 baseline to **M5 production-ready
 adoption**, executed by the **four implementation slices** (Claude Code / Codex /
