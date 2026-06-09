@@ -353,7 +353,7 @@ Key finding-id categories that gate maturity claims:
 | Maturity | Required finding IDs (pass, not skip) |
 | --- | --- |
 | M1 | `renderer-point-elements`, `runtime-test-hook` |
-| M2 | `client-no-db-import`, `lod-thresholds-centralized`, `points-bbox-validation`, `points-no-bulk-metadata` |
+| M2 | `client-no-db-import`, `lod-thresholds-centralized`, `points-bbox-validation`, `points-no-bulk-metadata` (minimum subset; full source-invariant list required at M4) |
 | M3 | `visual-config-centralized`, `render-browser-console-warnings` (warn acceptable) |
 | M4 | All source-invariant IDs pass; `density-payload`, `clusters-payload`, `points-payload` under budget |
 | M5 | M4 + `views-list`, `density-bbox`, `clusters-bbox`, `points-bbox`, `entity-lookup`, `search` (DB validator, not skip) |
