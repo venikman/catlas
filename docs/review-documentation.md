@@ -55,7 +55,7 @@ The duplicate `"./contract"` key that shadowed the barrel export has been collap
 ### 3.2 Props documentation is incomplete vs. actual component
 **Severity: Medium.**
 
-`atlas-react/README.md` lists 8 props. The actual `SemanticAtlasMapProps` has **23 props**. Missing from docs:
+`atlas-react/README.md` lists 8 props. The actual `SemanticAtlasMapProps` has **26 props**. Missing from docs:
 - `bbox`, `capped`, `className`, `emptyState`, `errorState`, `hoveredEntityId`, `loadingOverlay`, `renderedCount`, `selectedEntityId`, `status`, `style`, `targetMarker`, `theme`, `worldBounds`
 
 Several of these are important for adopters (e.g., `status` for loading/error states, `worldBounds` for custom coordinate extents, `theme` for palette customization, `className`/`style` for layout).
@@ -202,7 +202,7 @@ The documentation is **strong on the backend integration contract, benchmark too
 
 The main gaps are:
 - **No adopter entry point** (`quickstart.md` / `index.md`)
-- **Incomplete component API docs** (23 props, only 8 documented)
+- **Incomplete component API docs** (26 props, only 8 documented)
 - ~~Broken `./contract` export~~ (fixed in #18)
 - **Selector and report-path inconsistencies** across docs
 - **No install instructions** (package not yet publishable externally)

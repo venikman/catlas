@@ -12,7 +12,7 @@ This is the dominant issue. One component file is 44% of the entire `atlas-react
 
 ### 1.1 The stipple code is copy-paste-with-tweaks (lines 319–728)
 
-Three functions — `buildDensityRegions`, `buildDensityStipple`, `buildPointContextStipple` — all do the same thing: group samples by label/colorKey, compute weighted centroid + spread, then scatter gaussian-noise dots in elliptical lobes. The group-accumulate-centroid-spread pattern appears three times verbatim:
+Two functions — `buildDensityRegions` and `buildDensityStipple` — contain this pattern. The group-accumulate-centroid-spread pattern appears three times verbatim (once in `buildDensityRegions` and twice in `buildDensityStipple`):
 
 ```ts
 // This block appears 3 times (lines 323-362, 439-493, 615-635)
