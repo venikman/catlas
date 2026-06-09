@@ -1,6 +1,7 @@
-import { getAtlasEntity, getAtlasSourceMode } from "@/lib/atlas/db";
+import { getAtlasSourceMode } from "@/lib/atlas/db";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
+import { getAtlasStore } from "@/lib/atlas/store";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export async function GET(
     });
   }
 
-  const entity = await timer.measure("query", () => getAtlasEntity(id));
+  const entity = await timer.measure("query", () => getAtlasStore().getEntity(id));
   if (!entity) {
     return atlasError("Entity not found.", {
       code: "ATLAS_ENTITY_NOT_FOUND",

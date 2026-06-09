@@ -1,7 +1,8 @@
-import { getAtlasSourceMode, listAtlasDensityTiles } from "@/lib/atlas/db";
+import { getAtlasSourceMode } from "@/lib/atlas/db";
 import { isTruncated } from "@/lib/atlas/responseShaping";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
+import { getAtlasStore } from "@/lib/atlas/store";
 import { parseAtlasBboxParams } from "@/lib/atlas/validation";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
 
   const limit = Math.min(parsed.value.limit, ATLAS_RUNTIME_CONFIG.limits.maxDensityTiles);
   const tiles = await timer.measure("query", () =>
-    listAtlasDensityTiles({
+    getAtlasStore().listDensityTiles({
       view: parsed.value.view,
       bbox: parsed.value.bbox,
       limit,

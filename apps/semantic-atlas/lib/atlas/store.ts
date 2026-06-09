@@ -33,3 +33,12 @@ export const referenceAtlasStore: AtlasStore = {
   getEntity: getAtlasEntity,
   search: searchAtlas,
 };
+
+/**
+ * The active store the recommended routes read through. Adopters point the atlas
+ * at their own database by returning their own `AtlasStore` here — routes depend on
+ * this accessor, not on `db.ts` directly (D2/D3). Swapping this is the migration.
+ */
+export function getAtlasStore(): AtlasStore {
+  return referenceAtlasStore;
+}

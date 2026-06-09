@@ -1,6 +1,7 @@
-import { getAtlasSourceMode, getAtlasStats, listAtlasViews } from "@/lib/atlas/db";
+import { getAtlasSourceMode } from "@/lib/atlas/db";
 import { ATLAS_RUNTIME_CONFIG } from "@/lib/atlas/runtimeConfig";
 import { atlasError, atlasJson, createAtlasRouteTimer, logAtlasRequest } from "@/lib/atlas/serverTiming";
+import { getAtlasStore } from "@/lib/atlas/store";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export async function GET() {
   }
 
   const [views, stats] = await timer.measure("query", () =>
-    Promise.all([listAtlasViews(), getAtlasStats()]),
+    Promise.all([getAtlasStore().listViews(), getAtlasStore().getStats()]),
   );
   const serializationStartedAt = performance.now();
   timer.mark("serialize", serializationStartedAt);
