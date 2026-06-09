@@ -16,6 +16,10 @@ Run from the repository root:
 npm run conformance -w examples/atlas-data-prep
 ```
 
+This script builds `@catlas/atlas-react` first (the recipe imports the package's
+compiled `dist/`), so it works against a fresh checkout without a separate build
+step.
+
 The root command `npm run conformance` also packs `@catlas/atlas-react` and
 imports `@catlas/atlas-react/contract` from a temporary consumer outside the
 monorepo.
