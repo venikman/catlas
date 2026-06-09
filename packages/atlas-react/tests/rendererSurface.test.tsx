@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   ATLAS_DEFAULT_WORLD_BOUNDS,
@@ -170,6 +170,30 @@ describe("renderer adoption surface", () => {
     const lastCall = onViewportChange.mock.calls.at(-1)?.[0] as AtlasViewportState;
     expect(lastCall.centerX).toBeGreaterThan(0);
     expect(lastCall.zoom).toBeGreaterThan(1);
+  });
+
+  it("applies sequential functional viewport updates against latest state", () => {
+    const onViewportChange = vi.fn();
+    render(
+      <SemanticAtlasMap
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 1 }}
+        onViewportChange={onViewportChange}
+        points={[samplePoint]}
+        status="ready"
+      />,
+    );
+
+    const surface = screen.getByRole("application");
+    surface.focus();
+    act(() => {
+      fireEvent.keyDown(surface, { key: "ArrowRight" });
+      fireEvent.keyDown(surface, { key: "ArrowRight" });
+    });
+
+    expect(onViewportChange.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const first = onViewportChange.mock.calls[0]?.[0] as AtlasViewportState;
+    const second = onViewportChange.mock.calls[1]?.[0] as AtlasViewportState;
+    expect(second.centerX).toBeGreaterThan(first.centerX);
   });
 
   it("ignores keyboard zoom when modifier keys are pressed", () => {

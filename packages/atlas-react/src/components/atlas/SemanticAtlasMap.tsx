@@ -213,12 +213,21 @@ export function SemanticAtlasMap({
 
   const setViewport = useCallback(
     (update: SetStateAction<AtlasViewportState>) => {
-      const nextViewport =
-        typeof update === "function" ? update(activeViewport) : update;
-      if (!viewport) setInternalViewport(nextViewport);
-      onViewportChange?.(nextViewport);
+      if (viewport != null) {
+        const nextViewport =
+          typeof update === "function" ? update(viewport) : update;
+        onViewportChange?.(nextViewport);
+        return;
+      }
+
+      setInternalViewport((current) => {
+        const nextViewport =
+          typeof update === "function" ? update(current) : update;
+        onViewportChange?.(nextViewport);
+        return nextViewport;
+      });
     },
-    [activeViewport, onViewportChange, viewport],
+    [onViewportChange, viewport],
   );
 
   return (
