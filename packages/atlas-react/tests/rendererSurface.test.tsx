@@ -265,7 +265,7 @@ describe("renderer adoption surface", () => {
   });
 
   it("exposes cluster hit targets to assistive tech", () => {
-    const { container } = render(
+    render(
       <SemanticAtlasMap
         clusters={[sampleCluster]}
         initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
@@ -274,15 +274,18 @@ describe("renderer adoption surface", () => {
       />,
     );
 
-    const hitTarget = container.querySelector('[data-atlas-kind="cluster-hit"]');
-    expect(hitTarget).toHaveAttribute("aria-label", "Select cluster: Research");
-    expect(hitTarget).toHaveAttribute("role", "button");
+    // getByRole walks the computed accessibility tree (respects aria-hidden), so
+    // this fails if an aria-hidden ancestor ever re-hides the button again —
+    // unlike a querySelector, which would still pass on the original bug.
+    const hitTarget = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
     expect(hitTarget).toHaveAttribute("tabindex", "0");
   });
 
   it("activates clusters from the keyboard", () => {
     const onSelectCluster = vi.fn();
-    const { container } = render(
+    render(
       <SemanticAtlasMap
         clusters={[sampleCluster]}
         initialViewport={{ centerX: 0, centerY: 0, zoom: 4.5 }}
@@ -292,10 +295,13 @@ describe("renderer adoption surface", () => {
       />,
     );
 
-    const clusterButton = container.querySelector('[data-atlas-kind="cluster-hit"]');
-    expect(clusterButton).toBeTruthy();
-    fireEvent.keyDown(clusterButton!, { key: "Enter" });
+    const clusterButton = screen.getByRole("button", {
+      name: "Select cluster: Research",
+    });
+    fireEvent.keyDown(clusterButton, { key: "Enter" });
+    fireEvent.keyDown(clusterButton, { key: " " });
 
-    expect(onSelectCluster).toHaveBeenCalledWith(sampleCluster);
+    expect(onSelectCluster).toHaveBeenCalledTimes(2);
+    expect(onSelectCluster).toHaveBeenLastCalledWith(sampleCluster);
   });
 });

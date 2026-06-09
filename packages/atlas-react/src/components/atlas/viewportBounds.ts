@@ -8,7 +8,12 @@ import type { AtlasViewportState } from "./atlasComponentTypes";
 /** Viewport aspect ratio (height : width). Fixed by the canvas — not a world ratio. */
 export const ATLAS_VIEWPORT_ASPECT = 0.72;
 
-/** Breathing-room margin tuned for the default 14-unit world width. */
+/**
+ * Multiplicative viewport margin applied to every world's width (~7% of
+ * breathing room beyond the data extent, regardless of world size). The value
+ * 15/14 is chosen so the default 14-unit world reproduces the legacy span of 15
+ * at zoom 0.
+ */
 export const ATLAS_DEFAULT_WORLD_MARGIN = 15 / 14;
 
 export function viewSpanForWorldBounds(
