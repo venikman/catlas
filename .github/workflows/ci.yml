@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conformance:
+    name: conformance + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Builds @catlas/atlas-react and runs the contract conformance script.
+      # Catches a broken/duplicate `exports` map (e.g. the `./contract`
+      # duplicate-key regression that reached main when two PRs both added it)
+      # and any drift between the packed package surface and its consumers.
+      - name: Conformance
+        run: npm run conformance
+
+      # Typechecks @catlas/atlas-react and @catlas/semantic-atlas. Catches
+      # consumers that import symbols the package no longer exports.
+      - name: Typecheck
+        run: npm run typecheck
