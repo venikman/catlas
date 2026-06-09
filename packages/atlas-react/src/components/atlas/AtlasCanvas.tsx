@@ -1388,6 +1388,10 @@ export function AtlasCanvas({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
     const panKeys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"] as const;
     const isPan = panKeys.includes(event.key as (typeof panKeys)[number]);
     const isZoomIn = event.key === "+" || event.key === "=";

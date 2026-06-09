@@ -180,13 +180,12 @@ export function SemanticAtlasMap({
     return status;
   }, [dataPresent, status]);
   const showCanvas =
-    resolvedStatus !== "loading" &&
-    resolvedStatus !== "error" &&
-    resolvedStatus !== "empty";
+    resolvedStatus !== "error" && resolvedStatus !== "empty";
   const countForA11y = renderedCount ?? points.length;
 
   useEffect(() => {
     if (
+      typeof process !== "undefined" &&
       process.env.NODE_ENV !== "production" &&
       viewport != null &&
       !onViewportChange

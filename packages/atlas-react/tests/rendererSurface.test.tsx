@@ -89,6 +89,17 @@ describe("renderer adoption surface", () => {
     expect(screen.getByRole("status")).toHaveTextContent("No atlas data");
   });
 
+  it("keeps the canvas mounted while loading", () => {
+    render(
+      <SemanticAtlasMap
+        points={[samplePoint]}
+        status="loading"
+      />,
+    );
+    expect(screen.getByTestId("atlas-canvas")).toBeTruthy();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading atlas");
+  });
+
   it("shows capped and renderedCount badge when ready", () => {
     render(
       <SemanticAtlasMap
@@ -140,6 +151,25 @@ describe("renderer adoption surface", () => {
     const lastCall = onViewportChange.mock.calls.at(-1)?.[0] as AtlasViewportState;
     expect(lastCall.centerX).toBeGreaterThan(0);
     expect(lastCall.zoom).toBeGreaterThan(1);
+  });
+
+  it("ignores keyboard zoom when modifier keys are pressed", () => {
+    const onViewportChange = vi.fn();
+    render(
+      <SemanticAtlasMap
+        initialViewport={{ centerX: 0, centerY: 0, zoom: 1 }}
+        onViewportChange={onViewportChange}
+        points={[samplePoint]}
+        status="ready"
+      />,
+    );
+
+    const surface = screen.getByRole("application");
+    surface.focus();
+    fireEvent.keyDown(surface, { altKey: true, key: "+" });
+    fireEvent.keyDown(surface, { key: "+", metaKey: true });
+
+    expect(onViewportChange).not.toHaveBeenCalled();
   });
 
   it("applies theme palette overrides to the map surface", () => {
