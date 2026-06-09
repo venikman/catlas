@@ -1,4 +1,4 @@
-import type { AtlasCluster, AtlasPoint } from "./types";
+import type { AtlasCluster, AtlasEntityDetails, AtlasPoint } from "./types";
 
 const MAX_POINT_LABEL_LENGTH = 96;
 const COORD_PRECISION = 4;
@@ -61,6 +61,52 @@ export function lightweightCluster(cluster: AtlasCluster): AtlasCluster {
 
 export function lightweightClusters(clusters: AtlasCluster[]): AtlasCluster[] {
   return clusters.map(lightweightCluster);
+}
+
+export type LightweightEntityOptions = {
+  /**
+   * Allow-list of `metadata` keys to expose. Omit to pass all keys through (the
+   * reference default — its data is synthetic). Adopters serving real records set
+   * this so anonymous, CDN-cacheable responses only carry fields safe to publish.
+   * This is the field boundary from CONTRACT §5 — it controls the *contents* of the
+   * metadata bag, which `AtlasEntityDetails` requires to exist but never to be filled.
+   */
+  metadataAllowList?: readonly string[];
+  /** Set false to drop `payloadSummary` for anonymous responses. Default true. */
+  includePayloadSummary?: boolean;
+};
+
+/**
+ * Serving-layer projection for a single entity — mirrors `lightweightPoint` /
+ * `lightweightCluster`. Returns a valid `AtlasEntityDetails` (the renderer's inspector
+ * needs the shape) while letting the adopter trim what actually crosses the boundary.
+ */
+export function lightweightEntity(
+  entity: AtlasEntityDetails,
+  options: LightweightEntityOptions = {},
+): AtlasEntityDetails {
+  const { metadataAllowList, includePayloadSummary = true } = options;
+  const metadata = metadataAllowList
+    ? Object.fromEntries(
+        Object.entries(entity.metadata).filter(([key]) =>
+          metadataAllowList.includes(key),
+        ),
+      )
+    : entity.metadata;
+  return {
+    entityId: entity.entityId,
+    label: truncateAtlasLabel(entity.label),
+    entityType: entity.entityType,
+    payloadSummary: includePayloadSummary ? entity.payloadSummary : "",
+    metadata,
+    views: entity.views.map((view) => ({
+      viewId: view.viewId,
+      viewSlug: view.viewSlug,
+      x: roundCoord(view.x),
+      y: roundCoord(view.y),
+      clusterId: view.clusterId,
+    })),
+  };
 }
 
 export function isTruncated(count: number, limit: number): boolean {

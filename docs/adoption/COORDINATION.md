@@ -36,14 +36,14 @@ Changing any of these is a contract change → bump the version, notify all owne
 - **Done when:** routes run off a swappable store; `getEntity` exposes only allow-listed fields; the benchmark fails its own seeded regression and every red row prints why/fix/doc.
 
 ### Codex
-- **Conformance Kit (`contract-3/4`, P3):** wire `./contract` export; runtime validator for `AtlasPoint/Cluster/DensityTile/View` + golden fixtures + `npm run conformance`; stamp `ATLAS_CONTRACT_VERSION` in responses.
+- **Conformance Kit (`contract-3/4`, P3):** runtime validator for `AtlasPoint/Cluster/DensityTile/View` + golden fixtures + `npm run conformance`; stamp `ATLAS_CONTRACT_VERSION` in responses. (The `./contract` export is **already wired by the Claude Code slice** — build the validator on it.)
 - **Aggregation (`adopt-3`,`refcode-3`, P2):** extract parameterized `aggregateClusters(points)` + `buildDensityTiles({ worldBounds, tileCount, z })`; kill the `-7/14/8` duplication.
 - **Coordinate recipe (`adopt-2`, P2):** `examples/atlas-data-prep` — embeddings → UMAP/PCA → normalized, validated rows within `worldBounds` (normalize to an aspect ratio ≲ 0.72 so the default zoom-0 frame shows the full extent — CONTRACT §3).
 - **External-consumption proof (`testing-1`, P5):** `npm pack` + `file:` install smoke test outside the workspace (needs Devin's build hook).
 - **Done when:** a non-TS pipeline passes `npm run conformance`; the packed tarball imports cleanly outside the monorepo; recipe coords render in-bounds.
 
 ### Cursor
-- **`worldBounds` prop (`refcode-1`):** derive span from `AtlasWorldBounds` (default `ATLAS_DEFAULT_WORLD_BOUNDS`); width-fits at zoom 0 with fixed viewport aspect — tall extents pan, or optionally fit-to-limiting-dimension (CONTRACT §3 trade-off).
+- **`worldBounds` prop (`refcode-1`):** derive span from `AtlasWorldBounds` (default `ATLAS_DEFAULT_WORLD_BOUNDS`); width-fits at zoom 0 with fixed viewport aspect — tall extents pan, or optionally fit-to-limiting-dimension (CONTRACT §3 trade-off); export a canonical `viewSpanForZoom(worldBounds, zoom)` the tiler/recipe import (anti-drift, CONTRACT §3).
 - **5-state matrix (`rendererapi-1`):** `status` prop + `emptyState/errorState/loadingOverlay` slots + `capped/renderedCount`.
 - **Controlled footgun (`rendererapi-3`):** dev-warn when `viewport` passed without `onViewportChange`.
 - **A11y (`rendererapi-5`):** focusable map, arrow-pan / `+`/`-` zoom, accessible names on clusters/points.

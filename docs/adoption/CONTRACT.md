@@ -39,6 +39,10 @@ Canonical types are exported from `@catlas/atlas-react/types`
 `AtlasSearchResult`. The Conformance Kit (Codex, P3) ships a runtime validator +
 golden fixtures so a non-TS pipeline can prove conformance.
 
+Contract-only types — `AtlasStore`, `AtlasStats`, `AtlasViewportQuery`, `AtlasSearchQuery`,
+`AtlasWorldBounds` — plus `ATLAS_SELECTORS` and `ATLAS_CONTRACT_VERSION` are exported from
+`@catlas/atlas-react/contract` (wired in the Claude Code slice).
+
 ## 3. World bounds (the coordinate seam)
 
 `AtlasWorldBounds` is the shared agreement between **four** slices that MUST line up:
@@ -83,6 +87,9 @@ does *not* fully fit at zoom 0 — its extra height is reached by panning. (Than
 
 The cross-slice agreement is fundamentally the **extent** (`worldBounds`); the tiler and validator
 need only that. The formula is the renderer's reference so its `worldBounds` generalization is unambiguous.
+To make it normative rather than prose, Cursor exports a single `viewSpanForZoom(worldBounds, zoom)`
+(and `bboxForViewport`) from the renderer; the tiler and recipe import it instead of re-deriving the
+math, so the slices cannot drift by construction.
 
 ## 4. Selector contract
 
@@ -91,6 +98,9 @@ it. Cursor's slice makes the renderer DOM emit each exactly once and updates bot
 README snippets to use `graph = [data-testid="atlas-canvas"]`. It also reconciles the
 other scattered selectors into this registry (or marks them host-app-local): the
 `consumer-root` test-id in `examples/`, and `atlas-root` in `docs/atlas-visual-system.md`.
+
+Changing a selector **value** is a contract bump (§6) requiring a coordinated PR across Cursor (DOM),
+Claude Code (benchmarks), and Codex (export) — never an unversioned string edit in one place.
 
 ## 5. The field boundary (replaces auth)
 
@@ -110,9 +120,18 @@ the boundary**. There are two distinct layers — keep them separate:
 > implement two near-identical entity reads. The store returns the record; the serving
 > layer trims it. (Claude Code, P1.)
 
-Today `getEntity` is returned verbatim by the reference entity route, which is anonymous
-and CDN-cacheable (`sec-1`) — so P1 adds the `lightweightEntity()` projection and a note to
-set the entity TTL / field set accordingly. `search` must bound its candidate scan (`sec-2`).
+**`metadata` and `payloadSummary` are adopter-controlled bags, not a forced leak.**
+`AtlasEntityDetails` requires both fields (the renderer's inspector reads them), so a store
+cannot *omit* them — but it fully controls their **contents**: return `metadata: {}` /
+`payloadSummary: ""` for a locked-down entity, or populate only safe fields. `lightweightEntity()`
+further whitelists `metadata` keys (and can drop `payloadSummary`) for anonymous responses and
+still returns a valid `AtlasEntityDetails`. So no separate "lite" type and no extra store method
+are needed — the type forces each field to **exist**, never to be **populated**.
+
+Shipped: `lightweightEntity()` lives in `responseShaping.ts` (Claude Code, P1) and the reference
+entity route returns it. It passes the synthetic reference metadata through by default; adopters
+with real records pass a `metadataAllowList` and set the entity TTL accordingly. `search` must
+bound its candidate scan (`sec-2`).
 
 ## 6. Stability
 
