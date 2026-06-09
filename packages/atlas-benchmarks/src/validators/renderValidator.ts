@@ -18,6 +18,31 @@ import {
   warn,
 } from "./helpers";
 
+const DOC_BASE = "docs/adoption/benchmark-interpretation.md";
+
+const CONSOLE_ERRORS_TEACH = {
+  docRef: `${DOC_BASE}#render-browser-console-errors`,
+  fix: "Open the page, reproduce the console errors, and fix the throwing component or failing fetch before treating renders as trustworthy.",
+  loadBearing: true,
+  rationale:
+    "Browser console errors mean the renderer threw at runtime; any screenshot or measurement taken afterwards is unreliable.",
+} as const;
+
+const CONSOLE_WARNINGS_TEACH = {
+  docRef: `${DOC_BASE}#render-browser-console-warnings`,
+  fix: "Triage the captured warnings (hydration, keys, deprecations) before using screenshots as visual baselines.",
+  rationale:
+    "Console warnings often precede subtle visual regressions, but they do not by themselves invalidate the render, so this is advisory.",
+} as const;
+
+const NO_POINTS_FETCH_TEACH = {
+  docRef: `${DOC_BASE}#render-initial-no-points-fetch`,
+  fix: "Gate the initial fetch behind shouldFetchPoints so the first paint never calls /api/atlas/points.",
+  loadBearing: true,
+  rationale:
+    "Calling the raw points endpoint on initial load can stream the whole dataset before the user zooms in, breaking the cold-start budget and boundedness.",
+} as const;
+
 async function browserRuntimeChecks(
   baseUrl: string,
 ): Promise<CheckResult[]> {
@@ -171,12 +196,14 @@ async function browserRuntimeChecks(
             "render",
             "No browser console errors",
             "Captured 0 browser console errors and page errors.",
+            CONSOLE_ERRORS_TEACH,
           )
         : fail(
             "render-browser-console-errors",
             "render",
             "No browser console errors",
             `Captured ${errors.length} browser errors: ${errors.slice(0, 3).join(" | ")}`,
+            CONSOLE_ERRORS_TEACH,
           ),
       warnings.length === 0
         ? pass(
@@ -184,13 +211,14 @@ async function browserRuntimeChecks(
             "render",
             "Browser console warnings captured",
             "Captured 0 browser console warnings.",
-            { severity: "warn" },
+            { ...CONSOLE_WARNINGS_TEACH, severity: "warn" },
           )
         : warn(
             "render-browser-console-warnings",
             "render",
             "Browser console warnings captured",
             `Captured ${warnings.length} browser warnings: ${warnings.slice(0, 3).join(" | ")}`,
+            CONSOLE_WARNINGS_TEACH,
           ),
       failedRequests.length === 0 && failedResponses.length === 0
         ? pass(
@@ -216,12 +244,14 @@ async function browserRuntimeChecks(
             "render",
             "Initial load avoids raw points endpoint",
             "Initial browser load did not call /api/atlas/points.",
+            NO_POINTS_FETCH_TEACH,
           )
         : fail(
             "render-initial-no-points-fetch",
             "render",
             "Initial load avoids raw points endpoint",
             `Initial browser load called /api/atlas/points ${pointRequests.length} times.`,
+            NO_POINTS_FETCH_TEACH,
           ),
       initialAtlasPayloadBytes <= BUDGETS.hardCaps.initialAtlasPayloadBytes
         ? initialAtlasPayloadBytes <= BUDGETS.payloadBytes.initialSoftTarget

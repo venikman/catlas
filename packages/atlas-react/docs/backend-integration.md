@@ -1,5 +1,13 @@
 # Backend integration for `@catlas/atlas-react`
 
+> **Canonical source.** This document is the single source of truth for the
+> renderer data types, the API shape, the Postgres schema, the adapter pattern,
+> seeding, and the benchmark selectors. Adoption docs under `docs/adoption/`
+> link here instead of duplicating these definitions. The executable contract is
+> [`packages/atlas-react/src/contract/atlasStore.ts`](../src/contract/atlasStore.ts)
+> and the decision log is [`docs/adoption/CONTRACT.md`](../../../docs/adoption/CONTRACT.md).
+> When a shape changes here, bump `ATLAS_CONTRACT_VERSION` and notify the slice owners.
+
 `SemanticAtlasMap` is a controlled React renderer. Your app owns data fetching, API routes, and persistence. Pass arrays and viewport state into the component; do not import Next.js or `pg` from the package.
 
 ## Data contract
@@ -46,6 +54,62 @@ Core tables:
 | `atlas_density_tiles` | Low-zoom density/island payloads |
 
 Indexes cover bbox lookups on `(view_id, x, y)`, entity lookup, cluster joins, trigram search on labels, and density tile keys.
+
+## Aggregate refresh & orphan cleanup
+
+`atlas_clusters` and `atlas_density_tiles` are **precomputed aggregates** derived
+from `atlas_points`. The schema in `001_create_atlas_schema.sql` only declares an
+`on delete cascade` from each aggregate table to `atlas_views(id)` — deleting a
+**view** removes its points, clusters, and tiles together. There is **no**
+foreign key from an aggregate row to the individual points it summarizes
+(clusters key on `(view_id, lod_level, cluster_id)`, tiles key on
+`(view_id, z, x_tile, y_tile)`). So when points are inserted, updated, or deleted
+*within* a view, the aggregates do not change automatically: they must be rebuilt.
+
+### Refresh cadence (when points change)
+
+1. **Stage point changes first.** Upsert into `atlas_points` keyed on the
+   `(entity_id, view_id)` unique constraint; delete rows whose source entities no
+   longer exist. Coordinate regeneration uses the data-prep recipe
+   (`examples/atlas-data-prep/coordinate-recipe.mjs`) and must keep `x/y` inside
+   the declared `worldBounds` (default `ATLAS_DEFAULT_WORLD_BOUNDS`).
+2. **Rebuild clusters and density tiles from the new points**, not from raw scans
+   at request time. Use the shared, parameterized helpers so a rebuild matches
+   what the renderer expects: `aggregateClusters(points, { worldBounds })` and
+   `buildDensityTiles(points, { worldBounds, tileCount, z })` from
+   `@catlas/atlas-react/contract`. Write the results with upserts keyed on each
+   aggregate table's unique constraint so unchanged tiles/clusters are idempotent.
+3. **Pick a cadence.** Treat aggregates as a batch product: rebuild on the same
+   schedule as coordinate regeneration (offline, per batch), not per write. For
+   incremental point edits, rebuild only the affected views. Low/medium zoom must
+   stay aggregate-backed at every scale — never fall back to raw point scans to
+   "patch" stale clusters.
+4. **Invalidate caches after a rebuild.** Once aggregates are rewritten,
+   invalidate density/cluster caches (and the entity cache for changed entities).
+   See `docs/atlas-production.md` § Caching Strategy and § Real-Data Integration
+   Still Needed for the cadence/invalidation contract.
+
+### Orphan cleanup (aggregates whose points were deleted)
+
+Because there is no row-level FK from aggregates to points, deleting points can
+leave **orphaned** clusters or density tiles — rows that still describe regions or
+groups that no longer have any backing points. Reconcile them as the last step of
+every rebuild:
+
+- **Clusters:** delete `atlas_clusters` rows for a view whose `cluster_id` no
+  longer appears in `atlas_points` for that `(view_id, lod_level)`, or whose
+  recomputed `point_count` would be `0`. The rebuild in step 2 already computes
+  the surviving set; delete clusters not in that set within the same transaction.
+- **Density tiles:** delete `atlas_density_tiles` rows for a view whose
+  `(z, x_tile, y_tile)` key is not present in the freshly built tile set, or whose
+  recomputed `point_count` is `0`.
+- **Do this transactionally per view** so a partial rebuild never exposes a mix of
+  fresh points with stale aggregates. Deleting an entire view continues to rely on
+  the `on delete cascade` and needs no manual cleanup.
+
+Treat orphan cleanup as part of the refresh job, not a separate cron: every
+points change that triggers a rebuild must also prune the aggregates that the
+rebuild no longer produced.
 
 ## API shape
 

@@ -10,9 +10,12 @@ function finding(result: CheckResult): BenchmarkFinding {
     budget: result.budget,
     category: result.category,
     detail: result.detail,
+    docRef: result.docRef,
+    fix: result.fix,
     id: result.id,
     label: result.label,
     measured: result.measured,
+    rationale: result.rationale,
     sotaBudget: result.sotaBudget,
     unit: result.unit,
   };

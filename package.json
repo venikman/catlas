@@ -14,6 +14,7 @@
     "typecheck": "npm run typecheck -w @catlas/atlas-react && npm run typecheck -w @catlas/semantic-atlas",
     "validate": "npm run build:packages && npm test && npm run typecheck && npm run conformance",
     "conformance": "npm run build -w @catlas/atlas-react && node scripts/atlas-contract-conformance.mjs",
+    "smoke:pack": "node scripts/pack-smoke.mjs",
     "validate:example": "npm run build:packages && npm run example:atlas-consumer:build && npm run bench:ui -- --url=http://127.0.0.1:4173 --gate",
     "bench:ui": "npm run bench --workspace=@catlas/ui-graph-evaluator --",
     "bench:atlas": "npm run run -w @catlas/atlas-benchmarks -- --profile standard",

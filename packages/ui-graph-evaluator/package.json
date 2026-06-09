@@ -16,8 +16,12 @@
     "dist",
     "README.md"
   ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/run-ui-evaluator.js",
+    "prepack": "npm run build",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "bench": "tsx src/run-ui-evaluator.ts"

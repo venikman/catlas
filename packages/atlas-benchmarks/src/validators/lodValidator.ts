@@ -3,17 +3,43 @@ import type { BenchmarkContext, ValidatorResult } from "../types";
 import { computeBbox, scenarioUrl } from "../scenarios";
 import { isServerReachable, pass, skip, tryFetchJson, fail } from "./helpers";
 
+const DOC_BASE = "docs/adoption/benchmark-interpretation.md";
+
+const DENSITY_THRESHOLD_TEACH = {
+  docRef: `${DOC_BASE}#lod-density-threshold`,
+  fix: "Ensure getLodForZoom returns the density layer for zooms below densityMaxZoom in lib/atlas/lod.ts.",
+  loadBearing: true,
+  rationale:
+    "If low zoom does not select the density layer the viewer fetches heavier layers than the zoom warrants, breaking boundedness.",
+} as const;
+
+const CLUSTER_THRESHOLD_TEACH = {
+  docRef: `${DOC_BASE}#lod-cluster-threshold`,
+  fix: "Ensure getLodForZoom returns the clusters layer at densityMaxZoom in lib/atlas/lod.ts.",
+  loadBearing: true,
+  rationale:
+    "A wrong cluster threshold either skips clusters entirely or serves raw points too early, violating the LOD contract.",
+} as const;
+
+const POINT_THRESHOLD_TEACH = {
+  docRef: `${DOC_BASE}#lod-point-threshold`,
+  fix: "Ensure shouldFetchPoints returns true only at or above pointsMinZoom in lib/atlas/lod.ts.",
+  loadBearing: true,
+  rationale:
+    "If raw point fetches are not gated to high zoom, low-zoom views can request the full dataset and blow the payload hard cap.",
+} as const;
+
 export async function lodValidator(context: BenchmarkContext): Promise<ValidatorResult> {
   const results = [
     getLodForZoom(ATLAS_LOD_CONFIG.densityMaxZoom - 0.01).layer === "density"
-      ? pass("lod-density-threshold", "lod", "Low zoom selects density", "Zoom below densityMaxZoom selects density.")
-      : fail("lod-density-threshold", "lod", "Low zoom selects density", "Zoom below densityMaxZoom did not select density."),
+      ? pass("lod-density-threshold", "lod", "Low zoom selects density", "Zoom below densityMaxZoom selects density.", DENSITY_THRESHOLD_TEACH)
+      : fail("lod-density-threshold", "lod", "Low zoom selects density", "Zoom below densityMaxZoom did not select density.", DENSITY_THRESHOLD_TEACH),
     getLodForZoom(ATLAS_LOD_CONFIG.densityMaxZoom).layer === "clusters"
-      ? pass("lod-cluster-threshold", "lod", "Medium zoom selects clusters", "Zoom at densityMaxZoom selects clusters.")
-      : fail("lod-cluster-threshold", "lod", "Medium zoom selects clusters", "Zoom at densityMaxZoom did not select clusters."),
+      ? pass("lod-cluster-threshold", "lod", "Medium zoom selects clusters", "Zoom at densityMaxZoom selects clusters.", CLUSTER_THRESHOLD_TEACH)
+      : fail("lod-cluster-threshold", "lod", "Medium zoom selects clusters", "Zoom at densityMaxZoom did not select clusters.", CLUSTER_THRESHOLD_TEACH),
     shouldFetchPoints(ATLAS_LOD_CONFIG.pointsMinZoom)
-      ? pass("lod-point-threshold", "lod", "High zoom permits points", "Zoom at pointsMinZoom permits raw point fetches.")
-      : fail("lod-point-threshold", "lod", "High zoom permits points", "Zoom at pointsMinZoom did not permit raw point fetches."),
+      ? pass("lod-point-threshold", "lod", "High zoom permits points", "Zoom at pointsMinZoom permits raw point fetches.", POINT_THRESHOLD_TEACH)
+      : fail("lod-point-threshold", "lod", "High zoom permits points", "Zoom at pointsMinZoom did not permit raw point fetches.", POINT_THRESHOLD_TEACH),
   ];
 
   if (!(await isServerReachable(context.baseUrl))) {
