@@ -130,8 +130,10 @@ are needed — the type forces each field to **exist**, never to be **populated*
 
 Shipped: `lightweightEntity()` lives in `responseShaping.ts` (Claude Code, P1) and the reference
 entity route returns it. It passes the synthetic reference metadata through by default; adopters
-with real records pass a `metadataAllowList` and set the entity TTL accordingly. `search` must
-bound its candidate scan (`sec-2`).
+with real records pass a `metadataAllowList` and set the entity TTL accordingly. `search` now
+bounds its candidate scan via `ATLAS_MAX_SEARCH_CANDIDATES` (`sec-2`): it caps how many matching
+rows are scored before ranking, so an anonymous request can't scan a whole view. Per-IP/per-view
+throttling stays the host app's job (D1).
 
 ## 6. Stability
 
