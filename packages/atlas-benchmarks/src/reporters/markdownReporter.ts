@@ -34,7 +34,19 @@ function findingLine(finding: BenchmarkFinding): string {
     finding.sotaBudget === undefined
       ? ""
       : ` SOTA ${finding.sotaBudget}${finding.unit ? ` ${finding.unit}` : ""}`;
-  return `- ${finding.label}:${measured}${budget}${sota}. ${finding.detail}`;
+  const tag =
+    finding.severity === "error"
+      ? "[load-bearing] "
+      : finding.severity === "warn"
+        ? "[advisory] "
+        : "";
+  const teach = [
+    finding.rationale ? `Why: ${finding.rationale}` : "",
+    finding.fix ? `Fix: ${finding.fix}` : "",
+    finding.docRef ? `Doc: ${finding.docRef}` : "",
+  ].filter(Boolean);
+  const teachSuffix = teach.length > 0 ? ` — ${teach.join(" ")}` : "";
+  return `- ${tag}${finding.label}:${measured}${budget}${sota}. ${finding.detail}${teachSuffix}`;
 }
 
 function section(title: string, rows: string[], empty: string): string[] {

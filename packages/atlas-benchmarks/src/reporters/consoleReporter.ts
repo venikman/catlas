@@ -29,6 +29,20 @@ export function printConsoleReport(report: BenchmarkReport): void {
   );
   console.table(rows);
 
+  const redRows = report.validators
+    .flatMap((validator) => validator.results)
+    .filter((result) => result.status === "fail");
+  if (redRows.length > 0) {
+    console.log("Red rows (why / fix / doc):");
+    for (const result of redRows) {
+      const tag = result.severity === "error" ? "[load-bearing]" : "[advisory]";
+      console.log(`- ${tag} ${result.label} (${result.id}): ${result.detail}`);
+      if (result.rationale) console.log(`    Why: ${result.rationale}`);
+      if (result.fix) console.log(`    Fix: ${result.fix}`);
+      if (result.docRef) console.log(`    Doc: ${result.docRef}`);
+    }
+  }
+
   if (findings.recommendedActions.length > 0) {
     console.log("Recommended next actions:");
     for (const action of findings.recommendedActions) {

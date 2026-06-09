@@ -25,6 +25,12 @@ export interface CheckResult {
   /** Defaults to "lte": measured value should be <= budget. */
   comparison?: "lte" | "gte";
   unit?: string;
+  /** Teach metadata — why this check matters; surfaced for red rows. */
+  rationale?: string;
+  /** Teach metadata — the concrete fix to apply when this check is red. */
+  fix?: string;
+  /** Teach metadata — pointer to the canonical doc/section. */
+  docRef?: string;
 }
 
 export interface BenchmarkContext {
@@ -82,6 +88,14 @@ export interface BenchmarkFinding {
   budget?: number;
   sotaBudget?: number;
   unit?: string;
+  /** "error" = load-bearing (gate-blocking); "warn" = advisory. */
+  severity?: CheckSeverity;
+  /** Why this check matters. */
+  rationale?: string;
+  /** The concrete fix to apply when this check is red. */
+  fix?: string;
+  /** Pointer to the canonical doc/section. */
+  docRef?: string;
 }
 
 export interface BenchmarkReportFindings {

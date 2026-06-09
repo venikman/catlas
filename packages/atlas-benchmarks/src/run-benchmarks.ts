@@ -8,6 +8,7 @@ import { printConsoleReport } from "./reporters/consoleReporter";
 import { createReportFindings } from "./reporters/findings";
 import { writeJsonReport } from "./reporters/jsonReporter";
 import { writeMarkdownReport } from "./reporters/markdownReporter";
+import { summarize } from "./reporters/summary";
 import type {
   BenchmarkContext,
   BenchmarkProfile,
@@ -131,19 +132,6 @@ async function resolveView(baseUrl: string, fallback: string): Promise<string> {
   } catch {
     return fallback;
   }
-}
-
-function summarize(validators: ValidatorResult[]): BenchmarkReport["summary"] {
-  const all = validators.flatMap((validator) => validator.results);
-  return {
-    fail: all.filter((result) => result.status === "fail").length,
-    gateFailures: all.filter(
-      (result) => result.status === "fail" && result.severity === "error",
-    ).length,
-    pass: all.filter((result) => result.status === "pass").length,
-    skip: all.filter((result) => result.status === "skip").length,
-    warn: all.filter((result) => result.status === "warn").length,
-  };
 }
 
 async function runValidator(

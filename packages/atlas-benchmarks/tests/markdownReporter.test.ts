@@ -47,4 +47,55 @@ describe("benchmark markdown reporter", () => {
     expect(markdown).toContain("- Gate failures: 0");
     expect(markdown).toContain("pass | error | lod | LOD check | 42");
   });
+
+  it("teaches why/fix/doc and labels load-bearing for red findings", () => {
+    const report: BenchmarkReport = {
+      meta: {
+        baseUrl: "http://localhost:3002",
+        gate: true,
+        gitCommit: "abc123",
+        node: "v25.0.0",
+        platform: "darwin arm64",
+        profile: "quick",
+        timestamp: "2026-06-06T00:00:00.000Z",
+      },
+      summary: {
+        fail: 1,
+        gateFailures: 1,
+        pass: 0,
+        skip: 0,
+        warn: 0,
+      },
+      validators: [
+        {
+          validator: "source",
+          results: [
+            {
+              category: "source",
+              detail: "client module imports pg",
+              id: "client-no-db-import",
+              label: "Client bundle has no direct DB import",
+              severity: "error",
+              status: "fail",
+              rationale:
+                "shipping a DB driver to the browser leaks credentials and bloats the bundle",
+              fix: "move the query behind the AtlasStore server boundary",
+              docRef: "docs/adoption/CONTRACT.md#1-the-store-interface",
+            },
+          ],
+        },
+      ],
+    };
+
+    const markdown = createMarkdownReport(report);
+
+    expect(markdown).toContain("[load-bearing]");
+    expect(markdown).toContain(
+      "Why: shipping a DB driver to the browser leaks credentials",
+    );
+    expect(markdown).toContain(
+      "Fix: move the query behind the AtlasStore server boundary",
+    );
+    expect(markdown).toContain("Doc: docs/adoption/CONTRACT.md#1-the-store-interface");
+  });
 });

@@ -13,6 +13,9 @@ type SourceInvariant = {
   label: string;
   severity: "error" | "warn";
   ok: boolean;
+  rationale?: string;
+  fix?: string;
+  docRef?: string;
 };
 
 export function scanSourceInvariants(root = appRoot()): SourceInvariant[] {
@@ -69,6 +72,10 @@ export function scanSourceInvariants(root = appRoot()): SourceInvariant[] {
       label: "Client components do not import database code",
       ok: !clientImportsDb,
       severity: "error",
+      rationale:
+        "Importing lib/atlas/db into a client component ships the pg driver and DB credentials to the browser and breaks the AtlasStore boundary.",
+      fix: "Move data access behind the server-side AtlasStore; client components call /api/atlas/* routes, never db.ts.",
+      docRef: "docs/adoption/CONTRACT.md#1-the-store-interface-the-modular-boundary",
     },
     {
       detail: hardcodedFetchThresholds
@@ -78,6 +85,10 @@ export function scanSourceInvariants(root = appRoot()): SourceInvariant[] {
       label: "LOD thresholds are centralized",
       ok: !hardcodedFetchThresholds,
       severity: "error",
+      rationale:
+        "Hardcoding LOD zoom thresholds in client fetch code lets client and server disagree on density/cluster/point bands and request unbounded payloads at the wrong zoom.",
+      fix: "Derive endpoint selection from ATLAS_LOD_CONFIG / getLodForZoom instead of inline zoom comparisons.",
+      docRef: "packages/atlas-react/docs/backend-integration.md",
     },
     {
       detail: routeHasLowZoomGuard
@@ -96,6 +107,10 @@ export function scanSourceInvariants(root = appRoot()): SourceInvariant[] {
       label: "Raw point endpoint requires bbox validation",
       ok: routeHasBboxValidation,
       severity: "error",
+      rationale:
+        "Without bbox validation the raw point endpoint accepts an unbounded viewport and scans the whole view for an anonymous request.",
+      fix: "Call parseAtlasBboxParams (which enforces span caps) before querying the store in app/api/atlas/points/route.ts.",
+      docRef: "packages/atlas-react/docs/backend-integration.md",
     },
     {
       detail: routeHasLightweightPoint && shapingStripsMetadata
@@ -105,6 +120,10 @@ export function scanSourceInvariants(root = appRoot()): SourceInvariant[] {
       label: "Bulk point payload excludes heavy metadata",
       ok: routeHasLightweightPoint && shapingStripsMetadata,
       severity: "error",
+      rationale:
+        "Returning heavy metadata on the bulk point route bloats payloads and leaks fields that should load lazily per entity.",
+      fix: "Shape bulk points with lightweightPoint and keep metadata behind the entity lookup route.",
+      docRef: "docs/adoption/CONTRACT.md#5-the-field-boundary-replaces-auth",
     },
     {
       detail: runtimeConfigExists
@@ -179,15 +198,20 @@ export async function sourceInvariantValidator(
   return {
     validator: "sourceInvariant",
     results: invariants.map((invariant) => {
+      const teach = {
+        docRef: invariant.docRef,
+        fix: invariant.fix,
+        rationale: invariant.rationale,
+      };
       if (invariant.ok) {
         return pass(invariant.id, "architecture", invariant.label, invariant.detail, {
           severity: invariant.severity,
         });
       }
       if (invariant.severity === "warn") {
-        return warn(invariant.id, "architecture", invariant.label, invariant.detail);
+        return warn(invariant.id, "architecture", invariant.label, invariant.detail, teach);
       }
-      return fail(invariant.id, "architecture", invariant.label, invariant.detail);
+      return fail(invariant.id, "architecture", invariant.label, invariant.detail, teach);
     }),
   };
 }
