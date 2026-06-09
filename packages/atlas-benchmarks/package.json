@@ -18,8 +18,12 @@
     "src/sql",
     "README.md"
   ],
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json && tsx scripts/fix-dist-esm-imports.ts dist && chmod +x dist/run-benchmarks.js dist/run-clickable-audit.js",
+    "prepack": "npm run build",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "run": "tsx src/run-benchmarks.ts",

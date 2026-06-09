@@ -25,6 +25,17 @@ export interface CheckResult {
   /** Defaults to "lte": measured value should be <= budget. */
   comparison?: "lte" | "gte";
   unit?: string;
+  /** Why this check matters — printed as "Why:" in red rows so failures teach. */
+  rationale?: string;
+  /** Concrete remediation — printed as "Fix:" in red rows. */
+  fix?: string;
+  /** Doc anchor for deeper reading — printed as "Doc:" in red rows. */
+  docRef?: string;
+  /**
+   * Whether a failure of this check should block the quality gate.
+   * Defaults (see resolveLoadBearing) to severity === "error".
+   */
+  loadBearing?: boolean;
 }
 
 export interface BenchmarkContext {
@@ -82,6 +93,12 @@ export interface BenchmarkFinding {
   budget?: number;
   sotaBudget?: number;
   unit?: string;
+  /** Why this check matters — surfaced as "Why:" in reports. */
+  rationale?: string;
+  /** Concrete remediation — surfaced as "Fix:" in reports. */
+  fix?: string;
+  /** Doc anchor for deeper reading — surfaced as "Doc:" in reports. */
+  docRef?: string;
 }
 
 export interface BenchmarkReportFindings {

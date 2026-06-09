@@ -21,7 +21,7 @@ function row(result: CheckResult): string {
   ].join(" | ");
 }
 
-function findingLine(finding: BenchmarkFinding): string {
+function findingLines(finding: BenchmarkFinding): string[] {
   const measured =
     finding.measured === undefined
       ? ""
@@ -34,7 +34,11 @@ function findingLine(finding: BenchmarkFinding): string {
     finding.sotaBudget === undefined
       ? ""
       : ` SOTA ${finding.sotaBudget}${finding.unit ? ` ${finding.unit}` : ""}`;
-  return `- ${finding.label}:${measured}${budget}${sota}. ${finding.detail}`;
+  const lines = [`- ${finding.label}:${measured}${budget}${sota}. ${finding.detail}`];
+  if (finding.rationale) lines.push(`  - Why: ${finding.rationale}`);
+  if (finding.fix) lines.push(`  - Fix: ${finding.fix}`);
+  if (finding.docRef) lines.push(`  - Doc: ${finding.docRef}`);
+  return lines;
 }
 
 function section(title: string, rows: string[], empty: string): string[] {
@@ -65,17 +69,17 @@ export function createMarkdownReport(report: BenchmarkReport): string {
     "",
     ...section(
       "Hard Failures",
-      findings.hardFailures.map(findingLine),
+      findings.hardFailures.flatMap(findingLines),
       "None.",
     ),
     ...section(
       "SOTA Misses",
-      findings.sotaMisses.map(findingLine),
+      findings.sotaMisses.flatMap(findingLines),
       "None measured.",
     ),
     ...section(
       "Warnings And Skips",
-      [...findings.warnings, ...findings.skipped].map(findingLine),
+      [...findings.warnings, ...findings.skipped].flatMap(findingLines),
       "None.",
     ),
     ...section(

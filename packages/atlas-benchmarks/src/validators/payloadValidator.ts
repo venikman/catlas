@@ -3,6 +3,38 @@ import { computeBbox, scenarioUrl } from "../scenarios";
 import type { BenchmarkContext, CheckResult, ValidatorResult } from "../types";
 import { fail, isServerReachable, pass, skip, tryFetchJson, warn } from "./helpers";
 
+const DOC_BASE = "docs/adoption/benchmark-interpretation.md";
+
+const DENSITY_TEACH = {
+  docRef: `${DOC_BASE}#payload-density-size`,
+  fix: "Aggregate density into a coarser grid or quantize bin counts so the density payload stays under its soft target.",
+  rationale:
+    "Oversized density payloads slow the lowest-zoom first paint, but density is aggregated so this is advisory rather than gate-blocking.",
+} as const;
+
+const CLUSTERS_TEACH = {
+  docRef: `${DOC_BASE}#payload-clusters-size`,
+  fix: "Cap clusters per viewport and trim cluster DTO fields to keep the cluster payload under its soft target.",
+  rationale:
+    "Large cluster payloads add mid-zoom latency, but clusters are bounded by design so this is advisory rather than gate-blocking.",
+} as const;
+
+const POINTS_HARD_CAP_TEACH = {
+  docRef: `${DOC_BASE}#payload-points-hard-cap`,
+  fix: "Enforce the per-response point cap and viewport bbox in the points route, and shape rows through lightweightPoint.",
+  loadBearing: true,
+  rationale:
+    "Exceeding the high-zoom points hard cap means a single request can stall the renderer and exhaust client memory; this is the boundedness backstop.",
+} as const;
+
+const POINTS_NO_METADATA_TEACH = {
+  docRef: `${DOC_BASE}#payload-points-no-metadata`,
+  fix: "Strip metadata and payloadSummary from bulk point rows via lightweightPoint in responseShaping.ts.",
+  loadBearing: true,
+  rationale:
+    "Heavy per-point metadata in bulk responses multiplies payload size and breaks the points hard cap.",
+} as const;
+
 function hasHeavyPointMetadata(body: Record<string, unknown> | null): boolean {
   const points = body?.points;
   if (!Array.isArray(points)) return false;
@@ -72,6 +104,7 @@ export async function payloadValidator(
           "Density payload size",
           `Density payload was ${density.bytes} bytes.`,
           {
+            ...DENSITY_TEACH,
             budget: BUDGETS.payloadBytes.densitySoftTarget,
             comparison: "lte",
             measured: density.bytes,
@@ -86,6 +119,7 @@ export async function payloadValidator(
           "Density payload size",
           `Density payload was ${density.bytes} bytes, above soft target ${BUDGETS.payloadBytes.densitySoftTarget}.`,
           {
+            ...DENSITY_TEACH,
             budget: BUDGETS.payloadBytes.densitySoftTarget,
             comparison: "lte",
             measured: density.bytes,
@@ -103,6 +137,7 @@ export async function payloadValidator(
           "Cluster payload size",
           `Cluster payload was ${clusters.bytes} bytes.`,
           {
+            ...CLUSTERS_TEACH,
             budget: BUDGETS.payloadBytes.clustersSoftTarget,
             comparison: "lte",
             measured: clusters.bytes,
@@ -117,6 +152,7 @@ export async function payloadValidator(
           "Cluster payload size",
           `Cluster payload was ${clusters.bytes} bytes, above soft target ${BUDGETS.payloadBytes.clustersSoftTarget}.`,
           {
+            ...CLUSTERS_TEACH,
             budget: BUDGETS.payloadBytes.clustersSoftTarget,
             comparison: "lte",
             measured: clusters.bytes,
@@ -134,6 +170,7 @@ export async function payloadValidator(
           "High-zoom points payload hard cap",
           `Points payload was ${points.bytes} bytes.`,
           {
+            ...POINTS_HARD_CAP_TEACH,
             budget: BUDGETS.hardCaps.highZoomPointPayloadBytes,
             comparison: "lte",
             measured: points.bytes,
@@ -147,6 +184,7 @@ export async function payloadValidator(
           "High-zoom points payload hard cap",
           `Points payload was ${points.bytes} bytes, above hard cap ${BUDGETS.hardCaps.highZoomPointPayloadBytes}.`,
           {
+            ...POINTS_HARD_CAP_TEACH,
             budget: BUDGETS.hardCaps.highZoomPointPayloadBytes,
             comparison: "lte",
             measured: points.bytes,
@@ -181,12 +219,14 @@ export async function payloadValidator(
           "payload",
           "Point list omits heavy metadata",
           "At least one point response row contained metadata or payloadSummary.",
+          POINTS_NO_METADATA_TEACH,
         )
       : pass(
           "payload-points-no-metadata",
           "payload",
           "Point list omits heavy metadata",
           "No point response rows contained metadata or non-empty payloadSummary.",
+          POINTS_NO_METADATA_TEACH,
         ),
   );
 

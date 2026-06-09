@@ -1,9 +1,14 @@
+import { ATLAS_CONTRACT_VERSION } from "@catlas/atlas-react/contract";
 import { ATLAS_RUNTIME_CONFIG, cacheHeader } from "./runtimeConfig";
 
 export type AtlasRouteTimer = {
   mark: (name: string, startedAt: number) => void;
   measure: <T>(name: string, fn: () => Promise<T>) => Promise<T>;
-  meta: () => { serverTimingMs: number; timings: Record<string, number> };
+  meta: () => {
+    serverTimingMs: number;
+    timings: Record<string, number>;
+    contractVersion: typeof ATLAS_CONTRACT_VERSION;
+  };
   responseHeaders: (ttlSeconds?: number) => Headers;
 };
 
@@ -35,6 +40,7 @@ export function createAtlasRouteTimer(route: string): AtlasRouteTimer {
       return {
         serverTimingMs: durationSince(startedAt),
         timings: Object.fromEntries(timings),
+        contractVersion: ATLAS_CONTRACT_VERSION,
       };
     },
     responseHeaders(ttlSeconds) {

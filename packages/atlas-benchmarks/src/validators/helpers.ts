@@ -8,9 +8,13 @@ export function check(input: {
   category: string;
   comparison?: "lte" | "gte";
   detail: string;
+  docRef?: string;
+  fix?: string;
   id: string;
   label: string;
+  loadBearing?: boolean;
   measured?: number;
+  rationale?: string;
   severity?: CheckSeverity;
   sotaBudget?: number;
   status: CheckStatus;
@@ -20,6 +24,19 @@ export function check(input: {
     ...input,
     severity: input.severity ?? "error",
   };
+}
+
+/**
+ * The default load-bearing rule is `severity === "error"`: an error-severity
+ * failure blocks the quality gate. A check may override this by setting
+ * `loadBearing` explicitly (e.g. to mark a warn-severity check as advisory-only
+ * or to document an error-severity check as intentionally load-bearing).
+ */
+export function resolveLoadBearing(result: {
+  loadBearing?: boolean;
+  severity: CheckSeverity;
+}): boolean {
+  return result.loadBearing ?? result.severity === "error";
 }
 
 export function pass(

@@ -1,5 +1,19 @@
-import type { BenchmarkReport } from "../types";
+import type { BenchmarkFinding, BenchmarkReport } from "../types";
 import { createReportFindings } from "./findings";
+
+function printTeachBlocks(title: string, findings: BenchmarkFinding[]): void {
+  const teachable = findings.filter(
+    (finding) => finding.rationale || finding.fix || finding.docRef,
+  );
+  if (teachable.length === 0) return;
+  console.log(title);
+  for (const finding of teachable) {
+    console.log(`- ${finding.label}`);
+    if (finding.rationale) console.log(`  Why: ${finding.rationale}`);
+    if (finding.fix) console.log(`  Fix: ${finding.fix}`);
+    if (finding.docRef) console.log(`  Doc: ${finding.docRef}`);
+  }
+}
 
 export function printConsoleReport(report: BenchmarkReport): void {
   const findings =
@@ -28,6 +42,9 @@ export function printConsoleReport(report: BenchmarkReport): void {
     })),
   );
   console.table(rows);
+
+  printTeachBlocks("Hard failures (why/fix/doc):", findings.hardFailures);
+  printTeachBlocks("Warnings (why/fix/doc):", findings.warnings);
 
   if (findings.recommendedActions.length > 0) {
     console.log("Recommended next actions:");

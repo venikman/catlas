@@ -77,8 +77,22 @@ Everything else finishes in Wave 1.
 
 ## Status
 
-- [x] Wave 0 — contract pinned *(merged in #10)*
-- [ ] Claude Code — modular boundary + gate
-- [ ] Codex — conformance + aggregation + recipe
-- [ ] Cursor — renderer surface
-- [ ] Devin — docs + packaging + plan rewrite
+All four slices are complete on `main` plus this branch (which is synced with `main`).
+Verified together after the sync: `build:packages`, `typecheck`, all four test suites
+(ui-graph 6, atlas-benchmarks 25, atlas-react 49, semantic-atlas 20), `conformance`,
+`smoke:pack`, and `npm publish --dry-run` all pass.
+
+- [x] **Wave 0** — contract pinned *(merged in #10)*
+- [x] **Claude Code — backend boundary** *(merged in #14)* — `AtlasStore` seam (`store.ts`), `lightweightEntity()` field boundary (`sec-1`), bounded search (`sec-2`).
+- [x] **Cursor — renderer surface** *(merged in #15)* — `worldBounds`/`viewSpanForWorldBounds`, 5-state matrix, controlled-footgun warn, keyboard a11y, `ATLAS_SELECTORS` exported, palette theming.
+- [x] **Codex — conformance + aggregation + recipe** *(merged earlier; #16 pinned synthetic data in-bounds)* — `npm run conformance` green.
+- [x] **Claude Code — benchmark trust + teach** *(this branch)* — `rationale/fix/docRef/loadBearing` on load-bearing checks; reporters print why/fix/doc on every red row; new `percentiles`/`findings`/`reporterTeach`/`seededRegression` tests (the suite now fails its own seeded regression).
+- [x] **Devin — packaging** *(this branch)* — `prepack` build hooks on all three publishable packages; `react-dom` peer dropped; `@types/react` optional peer; `engines.node >=18.18`; `atlas-benchmarks` kept installable (CLI `bin`).
+- [x] **Codex — external-consumption proof** *(this branch)* — `scripts/pack-smoke.mjs` + `npm run smoke:pack` install the packed tarball outside the monorepo and import it.
+- [x] **Devin — docs + plan rewrite** *(this branch)* — skills-first plan (Phase 1 = minimum skill kit), D1–D3 folded in, P/A/P bound to finding IDs, `agent-playbooks.md` removed, `npm audit` in the evidence template; `backend-integration.md` declared canonical + "Aggregate refresh & orphan cleanup" semantics.
+- [x] **Claude Code — skills (Wave 2)** *(this branch)* — `.cursor/skills/catlas-adoption-scout` + `catlas-benchmark-gate` `SKILL.md`, validating against the existing M2 data-prep mapping.
+- [x] **Codex — `ATLAS_CONTRACT_VERSION` stamping** *(this branch)* — added to `serverTiming.meta()`, so every `/api/atlas/*` response carries `contractVersion` (the one contract item missing from #14).
+
+> Earlier-PR facts confirmed during the sync: the `benchmarks/sql/` paths are correct
+> everywhere, `atlas-analyze-queries.ts` guards on `DATABASE_URL`, and the React peer range
+> was already `^18.3.0 || ^19.0.0`.
