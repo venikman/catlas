@@ -355,12 +355,12 @@ Key finding-id categories that gate maturity claims:
 | M1 | `renderer-point-elements`, `runtime-test-hook` |
 | M2 | `client-no-db-import`, `lod-thresholds-centralized`, `points-bbox-validation`, `points-no-bulk-metadata` (minimum subset; full source-invariant list required at M4) |
 | M3 | `visual-config-centralized`, `render-browser-console-warnings` (warn acceptable) |
-| M4 | All source-invariant IDs pass; `density-payload`, `clusters-payload`, `points-payload` under budget |
-| M5 | M4 + `views-list`, `density-bbox`, `clusters-bbox`, `points-bbox`, `entity-lookup`, `search` (DB validator, not skip) |
+| M4 | All source-invariant IDs pass; `payload-density-size`, `payload-clusters-size`, `payload-points-hard-cap` under budget |
+| M5 | M4 + DB validator emits pass (not skip) for `db-views-list-latency`, `db-density-bbox-latency`, `db-clusters-bbox-latency`, `db-points-bbox-latency`, `db-entity-lookup-latency`, `db-search-latency` plus per-scenario row-bound and index-plan checks |
 
 Reject claims that skip from ability to promise without measured evidence.
 
-Overclaim example: a PR says "M4 benchmark-validated integration complete" but only ran `bench:atlas:quick` without `--gate` and attached no report. The ability exists because benchmarks are configured, but no measured performance evidence supports the M4 promise — specifically, finding IDs `density-payload`, `clusters-payload`, `points-payload` were never emitted with `status: "pass"`.
+Overclaim example: a PR says "M4 benchmark-validated integration complete" but only ran `bench:atlas:quick` without `--gate` and attached no report. The ability exists because benchmarks are configured, but no measured performance evidence supports the M4 promise — specifically, finding IDs `payload-density-size`, `payload-clusters-size`, `payload-points-hard-cap` were never emitted with `status: "pass"`.
 
 ## Success Criteria
 

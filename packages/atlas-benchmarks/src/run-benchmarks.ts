@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { cpus, platform } from "node:os";
 import { join } from "node:path";
