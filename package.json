@@ -13,6 +13,7 @@
     "test": "npm run test -w @catlas/ui-graph-evaluator && npm run test -w @catlas/atlas-benchmarks && npm run test -w @catlas/atlas-react && npm run test -w @catlas/semantic-atlas",
     "typecheck": "npm run typecheck -w @catlas/atlas-react && npm run typecheck -w @catlas/semantic-atlas",
     "validate": "npm run build:packages && npm test && npm run typecheck",
+    "conformance": "npm run build -w @catlas/atlas-react && npm run conformance -w examples/atlas-data-prep && node scripts/atlas-contract-conformance.mjs",
     "validate:example": "npm run build:packages && npm run example:atlas-consumer:build && npm run bench:ui -- --url=http://127.0.0.1:4173 --gate",
     "bench:ui": "npm run bench --workspace=@catlas/ui-graph-evaluator --",
     "bench:atlas": "npm run quick -w @catlas/atlas-benchmarks -- --profile standard",

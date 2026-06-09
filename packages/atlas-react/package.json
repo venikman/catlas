@@ -9,6 +9,10 @@
       "types": "./dist/components/atlas/index.d.ts",
       "import": "./dist/components/atlas/index.js"
     },
+    "./contract": {
+      "types": "./dist/contract/index.d.ts",
+      "import": "./dist/contract/index.js"
+    },
     "./lod": {
       "types": "./dist/lib/atlas/lod.d.ts",
       "import": "./dist/lib/atlas/lod.js"

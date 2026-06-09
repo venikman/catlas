@@ -1,0 +1,11 @@
+{
+  "name": "atlas-data-prep-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "conformance": "node coordinate-recipe.mjs"
+  },
+  "dependencies": {
+    "@catlas/atlas-react": "*"
+  }
+}
