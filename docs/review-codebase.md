@@ -81,7 +81,7 @@ Same hex parsing logic duplicated. One should call the other.
 - `math.ts:50-67` — exported `worldToScreen` and `screenToWorld`
 - `AtlasCanvas.tsx:251-273` — local `projectWorldPoint` and `unprojectScreenPoint`
 
-Different signatures (math.ts uses `{ size, bbox }`, AtlasCanvas uses `{ transform, bbox }`) but similar intent. **Both math.ts exports are unused** — nothing imports them anywhere in the monorepo. Dead code.
+Different signatures (math.ts uses `{ size, bbox }`, AtlasCanvas uses `{ transform, bbox }`) but similar intent. **Both math.ts exports are unused internally** — nothing in the monorepo imports them. However, they are part of the public `./math` subpath export, so removing them would be a breaking change for external consumers. They should be deprecated or consolidated with the AtlasCanvas variants before removal.
 
 ### 2.5 `AtlasTargetMarker` — type defined twice
 
@@ -100,7 +100,7 @@ These create `Float32Array`/`Uint8Array` typed array buffers (lines 39-61, 76-97
 
 ### 3.2 `worldToScreen` and `screenToWorld` in math.ts
 
-As noted above — exported, never imported.
+Unused internally but part of the public `./math` export — see §2.4. Candidates for deprecation, not immediate deletion.
 
 ### 3.3 `componentTypes.ts` — unnecessary re-export wrapper
 
@@ -182,7 +182,7 @@ This generates IDs like `cluster|10:golden-view|15:language-models|1:1`. The len
 ### P0 — Reduce before anyone else touches this code
 1. **Split AtlasCanvas.tsx.** Extract stipple generators, path builders, and canvas rendering into separate files. Target: AtlasCanvas.tsx < 600 lines.
 2. **Deduplicate `clamp`/`clampNumber`, `smoothstep`, `hexToRgba`/`rgbaCssFromHex`.** Import from `math.ts` or `visualConfig.ts`. 
-3. **Delete dead code:** `buildPointBuffers`, `buildDensityBuffers`, `RenderPointBuffer`, `worldToScreen`, `screenToWorld`.
+3. **Delete dead code:** `buildPointBuffers`, `buildDensityBuffers`, `RenderPointBuffer`. Deprecate `worldToScreen`/`screenToWorld` (public export — see §2.4).
 4. **Share `AtlasTargetMarker` type** — define once, import in both components.
 
 ### P1 — Reduce magic numbers
