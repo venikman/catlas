@@ -17,7 +17,7 @@ import type {
 } from "./types";
 import { appRoot, monorepoRoot } from "./monorepoPaths.js";
 import { VALIDATORS } from "./validators/index.js";
-import { fail, isServerReachable } from "./validators/helpers";
+import { fail, isServerReachable, resolveLoadBearing } from "./validators/helpers";
 
 function arg(name: string, fallback?: string): string | undefined {
   const direct = process.argv.find((entry) => entry.startsWith(`--${name}=`));
@@ -138,7 +138,7 @@ function summarize(validators: ValidatorResult[]): BenchmarkReport["summary"] {
   return {
     fail: all.filter((result) => result.status === "fail").length,
     gateFailures: all.filter(
-      (result) => result.status === "fail" && result.severity === "error",
+      (result) => result.status === "fail" && resolveLoadBearing(result),
     ).length,
     pass: all.filter((result) => result.status === "pass").length,
     skip: all.filter((result) => result.status === "skip").length,

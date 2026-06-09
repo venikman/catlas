@@ -4,14 +4,16 @@ import { resolveLoadBearing } from "../src/validators/helpers";
 import type { CheckResult, ValidatorResult } from "../src/types";
 
 /**
- * Mirrors summarize() in src/run-benchmarks.ts: an error-severity failure is a
- * gate failure. If the gate logic ever stops counting load-bearing hard fails,
- * this regression test fails alongside the benchmark it guards.
+ * Mirrors summarize() in src/run-benchmarks.ts: a failed check trips the gate
+ * when it is load-bearing (resolveLoadBearing(), which defaults to severity
+ * === "error" but honors an explicit loadBearing flag). If the gate logic ever
+ * stops counting load-bearing hard fails, this regression test fails alongside
+ * the benchmark it guards.
  */
 function gateFailures(validators: ValidatorResult[]): number {
   return validators
     .flatMap((validator) => validator.results)
-    .filter((result) => result.status === "fail" && result.severity === "error")
+    .filter((result) => result.status === "fail" && resolveLoadBearing(result))
     .length;
 }
 
@@ -55,6 +57,30 @@ const advisoryFail: CheckResult = {
   status: "fail",
   unit: "bytes",
 };
+
+// A load-bearing failure that is NOT error-severity. Under the old gate logic
+// (status === "fail" && severity === "error") this would have been silently
+// ignored despite loadBearing: true; the gate now honors resolveLoadBearing().
+const loadBearingWarnFail: CheckResult = {
+  category: "lod",
+  detail: "Density tiles were served below the configured zoom threshold.",
+  docRef: "docs/adoption/benchmark-interpretation.md#lod-density-threshold",
+  fix: "Gate the density route on ATLAS_LOD_CONFIG.densityMaxZoom.",
+  id: "lod-density-threshold",
+  label: "Density LOD threshold",
+  loadBearing: true,
+  rationale: "Serving the wrong LOD breaks bounded navigation guarantees.",
+  severity: "warn",
+  status: "fail",
+};
+
+describe("seeded regression: load-bearing flag overrides severity at the gate", () => {
+  it("trips the gate for a load-bearing fail even when severity is warn", () => {
+    // This is the case the review flagged: loadBearing must be authoritative.
+    expect(gateFailures(validators([loadBearingWarnFail]))).toBe(1);
+    expect(resolveLoadBearing(loadBearingWarnFail)).toBe(true);
+  });
+});
 
 describe("seeded regression: load-bearing hard fail trips the gate", () => {
   it("counts the seeded hard fail as a gate failure", () => {
