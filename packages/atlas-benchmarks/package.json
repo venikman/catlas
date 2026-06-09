@@ -23,7 +23,6 @@
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "run": "tsx src/run-benchmarks.ts",
-    "quick": "tsx src/run-benchmarks.ts --profile quick",
     "clickable": "tsx src/run-clickable-audit.ts"
   },
   "dependencies": {
