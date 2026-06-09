@@ -80,4 +80,19 @@ describe("atlas request validation", () => {
       expect(result.value.limit).toBe(20);
     }
   });
+
+  it("rejects search queries below the configured minimum length", () => {
+    const tooShort = parseAtlasSearchParams(
+      new URLSearchParams({ view: "research-domains", q: "x" }),
+    );
+    expect(tooShort.ok).toBe(false);
+    if (!tooShort.ok) {
+      expect(tooShort.status).toBe(400);
+    }
+
+    const longEnough = parseAtlasSearchParams(
+      new URLSearchParams({ view: "research-domains", q: "ml" }),
+    );
+    expect(longEnough.ok).toBe(true);
+  });
 });

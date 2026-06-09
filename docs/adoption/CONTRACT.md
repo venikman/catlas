@@ -87,9 +87,9 @@ does *not* fully fit at zoom 0 — its extra height is reached by panning. (Than
 
 The cross-slice agreement is fundamentally the **extent** (`worldBounds`); the tiler and validator
 need only that. The formula is the renderer's reference so its `worldBounds` generalization is unambiguous.
-To make it normative rather than prose, Cursor exports a single `viewSpanForZoom(worldBounds, zoom)`
-(and `bboxForViewport`) from the renderer; the tiler and recipe import it instead of re-deriving the
-math, so the slices cannot drift by construction.
+To make it normative rather than prose, Cursor's renderer exports `viewSpanForWorldBounds(zoom, worldBounds)`
+(and `bboxForViewport(viewport, worldBounds)`); the tiler and recipe import those instead of re-deriving
+the math, so the slices cannot drift by construction.
 
 ## 4. Selector contract
 
