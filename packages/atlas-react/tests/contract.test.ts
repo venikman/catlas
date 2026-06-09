@@ -42,6 +42,16 @@ describe("atlas contract runtime", () => {
     });
   });
 
+  it("does not crash on nullish contract inputs", () => {
+    expect(validateAtlasContractRows(null).issues).toContainEqual({
+      path: "rows",
+      message: "must be an object",
+    });
+    expect(validateAtlasContractRows({ points: [] }, null).ok).toBe(true);
+    expect(aggregateClusters(null as unknown as AtlasPoint[])).toEqual([]);
+    expect(buildDensityTiles(null as unknown as AtlasPoint[])).toEqual([]);
+  });
+
   it("aggregates clusters from parameterized world coordinates", () => {
     const points: AtlasPoint[] = [
       {
@@ -72,6 +82,9 @@ describe("atlas contract runtime", () => {
 
     const clusters = aggregateClusters(points, {
       lodLevel: 2,
+      metadataForCluster: (_clusterId, clusterPoints) => ({
+        representativeEntityIds: clusterPoints.map((point) => point.entityId),
+      }),
       worldBounds: ATLAS_UNIT_WORLD_BOUNDS,
     });
 
@@ -80,9 +93,47 @@ describe("atlas contract runtime", () => {
       centroidX: 0.2,
       centroidY: 0.3,
       lodLevel: 2,
+      metadata: {
+        representativeEntityIds: ["left-1", "left-2"],
+      },
       pointCount: 2,
+      radius: 0.15,
       viewSlug: "fixture",
     });
+  });
+
+  it("keeps raw atlas ids collision-free when ids contain delimiters", () => {
+    const points: AtlasPoint[] = [
+      {
+        clusterId: "c",
+        colorKey: "#2563eb",
+        entityId: "first",
+        entityType: "document",
+        importance: 0.6,
+        label: "First",
+        viewId: "a:b",
+        x: 0.1,
+        y: 0.2,
+      },
+      {
+        clusterId: "b:c",
+        colorKey: "#059669",
+        entityId: "second",
+        entityType: "document",
+        importance: 0.8,
+        label: "Second",
+        viewId: "a",
+        x: 0.3,
+        y: 0.4,
+      },
+    ];
+
+    const clusters = aggregateClusters(points, {
+      worldBounds: ATLAS_UNIT_WORLD_BOUNDS,
+    });
+
+    expect(clusters).toHaveLength(2);
+    expect(clusters.map((cluster) => cluster.pointCount)).toEqual([1, 1]);
   });
 
   it("builds density tiles with explicit worldBounds, tileCount, and z", () => {

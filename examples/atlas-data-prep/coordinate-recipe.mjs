@@ -168,10 +168,23 @@ function normalizeProjectedRows(rows, projectedRows, worldBounds) {
   });
 }
 
-export function runCoordinateRecipe({
-  rows = SOURCE_EMBEDDING_ROWS,
-  worldBounds = DATA_PREP_WORLD_BOUNDS,
-} = {}) {
+export function runCoordinateRecipe(input = {}) {
+  const {
+    rows = SOURCE_EMBEDDING_ROWS,
+    worldBounds = DATA_PREP_WORLD_BOUNDS,
+  } = input ?? {};
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return {
+      clusters: [],
+      densityTiles: [],
+      method: "pca",
+      points: [],
+      sourceRows: 0,
+      worldBounds,
+    };
+  }
+
   const projectedRows = projectEmbeddingsWithPca(rows);
   const points = normalizeProjectedRows(rows, projectedRows, worldBounds);
   const clusters = aggregateClusters(points, { worldBounds });

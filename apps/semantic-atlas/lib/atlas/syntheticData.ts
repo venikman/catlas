@@ -289,6 +289,10 @@ function summarizeClusters(points: AtlasPoint[]): AtlasCluster[] {
   return aggregateClusters(points, {
     colorKeyForCluster: (clusterId) => clusterTemplate(clusterId).colorKey,
     labelForCluster: (clusterId) => clusterTemplate(clusterId).label,
+    metadataForCluster: (_clusterId, clusterPoints) => ({
+      representativeEntityIds: clusterPoints.slice(0, 5).map((point) => point.entityId),
+    }),
+    minRadius: 0.15,
     worldBounds: ATLAS_DEFAULT_WORLD_BOUNDS,
   });
 }

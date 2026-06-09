@@ -301,14 +301,14 @@ export function validateAtlasWorldBounds(
 
 export function validateAtlasPoint(
   input: unknown,
-  options: AtlasContractValidationOptions = {},
+  options: AtlasContractValidationOptions | null = {},
 ): AtlasContractValidationResult {
   const issues: AtlasContractValidationIssue[] = [];
   validateAtlasPointValue(
     input,
     "point",
-    options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
-    options.requireInBounds ?? true,
+    options?.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
+    options?.requireInBounds ?? true,
     issues,
   );
   return { ok: issues.length === 0, issues };
@@ -316,14 +316,14 @@ export function validateAtlasPoint(
 
 export function validateAtlasCluster(
   input: unknown,
-  options: AtlasContractValidationOptions = {},
+  options: AtlasContractValidationOptions | null = {},
 ): AtlasContractValidationResult {
   const issues: AtlasContractValidationIssue[] = [];
   validateAtlasClusterValue(
     input,
     "cluster",
-    options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
-    options.requireInBounds ?? true,
+    options?.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
+    options?.requireInBounds ?? true,
     issues,
   );
   return { ok: issues.length === 0, issues };
@@ -331,29 +331,36 @@ export function validateAtlasCluster(
 
 export function validateAtlasDensityTile(
   input: unknown,
-  options: AtlasContractValidationOptions = {},
+  options: AtlasContractValidationOptions | null = {},
 ): AtlasContractValidationResult {
   const issues: AtlasContractValidationIssue[] = [];
   validateAtlasDensityTileValue(
     input,
     "densityTile",
-    options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
-    options.requireInBounds ?? true,
+    options?.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
+    options?.requireInBounds ?? true,
     issues,
   );
   return { ok: issues.length === 0, issues };
 }
 
 export function validateAtlasContractRows(
-  rows: AtlasContractRows,
-  options: AtlasContractValidationOptions = {},
+  rows: AtlasContractRows | null | undefined,
+  options: AtlasContractValidationOptions | null = {},
 ): AtlasContractValidationResult {
   const issues: AtlasContractValidationIssue[] = [];
-  const worldBounds =
-    rows.worldBounds ?? options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS;
-  const requireInBounds = options.requireInBounds ?? true;
+  if (!isRecord(rows)) {
+    addIssue(issues, "rows", "must be an object");
+    return { ok: false, issues };
+  }
 
-  validateBoundsShape(worldBounds, "worldBounds", issues);
+  const worldBounds =
+    rows.worldBounds ?? options?.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS;
+  const requireInBounds = options?.requireInBounds ?? true;
+
+  const validatedBounds =
+    validateBoundsShape(worldBounds, "worldBounds", issues) ??
+    ATLAS_DEFAULT_WORLD_BOUNDS;
 
   const collections = [
     ["points", rows.points, validateAtlasPointValue],
@@ -368,7 +375,7 @@ export function validateAtlasContractRows(
       continue;
     }
     values.forEach((value, index) => {
-      validator(value, `${name}[${index}]`, worldBounds, requireInBounds, issues);
+      validator(value, `${name}[${index}]`, validatedBounds, requireInBounds, issues);
     });
   }
 
@@ -382,8 +389,8 @@ export function formatAtlasContractIssues(
 }
 
 export function assertAtlasContractRows(
-  rows: AtlasContractRows,
-  options: AtlasContractValidationOptions = {},
+  rows: AtlasContractRows | null | undefined,
+  options: AtlasContractValidationOptions | null = {},
 ): void {
   const result = validateAtlasContractRows(rows, options);
   if (!result.ok) {

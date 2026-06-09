@@ -12,9 +12,14 @@ export type AtlasClusterAggregationOptions = {
   viewId?: string;
   viewSlug?: string;
   lodLevel?: number;
+  minRadius?: number;
   worldBounds?: AtlasWorldBounds;
   labelForCluster?: (clusterId: string, points: AtlasPoint[]) => string;
   colorKeyForCluster?: (clusterId: string, points: AtlasPoint[]) => string;
+  metadataForCluster?: (
+    clusterId: string,
+    points: AtlasPoint[],
+  ) => Record<string, unknown> | undefined;
 };
 
 export type AtlasDensityTileOptions = {
@@ -31,6 +36,7 @@ const DEFAULT_COLOR_KEY = "#64748b";
 const DEFAULT_TILE_COUNT = 8;
 const DEFAULT_DENSITY_Z = 2;
 const DEFAULT_MAX_POINTS_PER_TILE = 40;
+const DEFAULT_MIN_CLUSTER_RADIUS = 0.15;
 
 function rounded(value: number, digits = 5): number {
   return Number(value.toFixed(digits));
@@ -49,6 +55,7 @@ function viewSlugFor(point: AtlasPoint, fallback?: string): string | undefined {
 }
 
 function labelFromClusterId(clusterId: string): string {
+  if (typeof clusterId !== "string" || clusterId.length === 0) return "";
   return clusterId
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (character) => character.toUpperCase());
@@ -89,18 +96,24 @@ function tileIndex(
 
 export function aggregateClusters(
   points: AtlasPoint[],
-  options: AtlasClusterAggregationOptions = {},
+  options: AtlasClusterAggregationOptions | null = {},
 ): AtlasCluster[] {
+  if (!Array.isArray(points)) return [];
+  options ??= {};
   const lodLevel = options.lodLevel ?? 1;
+  const minRadius = options.minRadius ?? DEFAULT_MIN_CLUSTER_RADIUS;
   assertWorldBounds(options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS);
   if (!Number.isInteger(lodLevel) || lodLevel < 0) {
     throw new Error("lodLevel must be a non-negative integer.");
+  }
+  if (!Number.isFinite(minRadius) || minRadius < 0) {
+    throw new Error("minRadius must be a non-negative finite number.");
   }
 
   const groups = new Map<string, AtlasPoint[]>();
   for (const point of points) {
     const viewId = viewIdFor(point, options.viewId);
-    const key = `${viewId}:${point.clusterId}`;
+    const key = JSON.stringify([viewId, point.clusterId]);
     const group = groups.get(key);
     if (group) {
       group.push(point);
@@ -121,8 +134,11 @@ export function aggregateClusters(
       const boundsMaxX = Math.max(...xs);
       const boundsMinY = Math.min(...ys);
       const boundsMaxY = Math.max(...ys);
-      const radius =
-        Math.max(boundsMaxX - boundsMinX, boundsMaxY - boundsMinY, 0.01) / 2;
+      const radius = Math.max(
+        Math.max(boundsMaxX - boundsMinX, boundsMaxY - boundsMinY) / 2,
+        minRadius,
+      );
+      const metadata = options.metadataForCluster?.(clusterId, clusterPoints);
 
       return {
         boundsMaxX: rounded(boundsMaxX),
@@ -145,6 +161,7 @@ export function aggregateClusters(
           options.labelForCluster?.(clusterId, clusterPoints) ??
           labelFromClusterId(clusterId),
         lodLevel,
+        metadata,
         pointCount: clusterPoints.length,
         radius: rounded(radius),
         viewId,
@@ -160,8 +177,10 @@ export function aggregateClusters(
 
 export function buildDensityTiles(
   points: AtlasPoint[],
-  options: AtlasDensityTileOptions = {},
+  options: AtlasDensityTileOptions | null = {},
 ): AtlasDensityTile[] {
+  if (!Array.isArray(points)) return [];
+  options ??= {};
   const worldBounds = assertWorldBounds(
     options.worldBounds ?? ATLAS_DEFAULT_WORLD_BOUNDS,
   );
@@ -187,7 +206,7 @@ export function buildDensityTiles(
     const yTile = tileIndex(point.y, worldBounds.minY, tileSizeY, tileCount);
     const viewId = viewIdFor(point, options.viewId);
     const viewSlug = viewSlugFor(point, options.viewSlug);
-    const key = `${viewId}:${z}:${xTile}:${yTile}:${point.clusterId}`;
+    const key = JSON.stringify([viewId, z, xTile, yTile, point.clusterId]);
     const existing = tiles.get(key);
     const densityPoint = {
       weight: rounded(0.35 + point.importance, 3),
